@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Auditoría Final / Acabados · LIVES</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1d3557;--amber:#e9c46a;--green:#2a9d8f;--red:#e63946;--bg:#eef1f4;--card:#fff;--ink:#1d3557;--muted:#6b7785;--line:#dfe5ec}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);font-family:'Barlow',system-ui,sans-serif;color:var(--ink);padding-bottom:96px}
+header{background:var(--navy);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+header .logo{font-family:'Barlow Condensed';font-weight:700;font-size:13px;letter-spacing:3px;opacity:.85}
+header h1{margin:2px 0 0;font-size:18px;font-weight:700;font-family:'Barlow Condensed'}
+header .code{font-size:11px;color:var(--amber);font-weight:600;letter-spacing:1px}
+.wrap{max-width:640px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.card>.sec{display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed';font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:1px;color:var(--navy);margin:0 0 12px}
+.card>.sec .dot{width:9px;height:9px;border-radius:50%;background:var(--amber)}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font-size:16px;font-family:inherit;background:#fbfcfd;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);background:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid .full{grid-column:1/-1}
+.field{margin-bottom:10px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:11px 8px;border:1px solid var(--line);background:#fbfcfd;border-radius:9px;font-family:inherit;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.aql{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.aql .cell{background:#f3f6f9;border:1px solid var(--line);border-radius:10px;padding:10px 6px;text-align:center}
+.aql .cell .k{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.aql .cell .v{font-family:'Barlow Condensed';font-weight:700;font-size:24px;line-height:1;margin-top:3px}
+.aql .cell.rech .v{color:var(--red)}.aql .cell.acep .v{color:var(--green)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.chip{border:1px dashed var(--navy);color:var(--navy);background:#fff;border-radius:20px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.chip:active{background:var(--navy);color:#fff}
+.def{border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:12px;margin-bottom:10px;background:#fcfdfe;position:relative}
+.def .rm{position:absolute;top:8px;right:8px;border:none;background:#f1f3f6;color:var(--muted);width:28px;height:28px;border-radius:7px;font-size:16px;cursor:pointer}
+.qty{display:flex;align-items:center}
+.qty button{width:42px;height:44px;border:1px solid var(--line);background:#fff;font-size:20px;font-weight:700;color:var(--navy);cursor:pointer}
+.qty button:first-child{border-radius:9px 0 0 9px}.qty button:last-child{border-radius:0 9px 9px 0}
+.qty input{text-align:center;border-radius:0;border-left:none;border-right:none}
+.photo{display:flex;align-items:center;gap:10px;margin-top:8px}
+.photo .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer}
+.photo img{width:46px;height:46px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.addbtn{width:100%;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:10px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:'Barlow Condensed';letter-spacing:.5px;text-transform:uppercase}
+.total-def{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:10px;border-top:1px dashed var(--line);font-weight:600;font-size:14px;color:var(--muted)}
+.total-def b{font-family:'Barlow Condensed';font-size:24px;color:var(--navy)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:10px;padding:12px}
+.toggle.lic{background:#eaf4f2;border:1px solid var(--green);margin-bottom:12px}
+.toggle.ovr{background:#fdf3e3;border:1px solid var(--amber)}
+.switch{position:relative;width:50px;height:28px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#cfd6de;border-radius:20px;transition:.2s;cursor:pointer}
+.slider:before{content:"";position:absolute;height:22px;width:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked+.slider{background:var(--green)}
+.switch input:checked+.slider:before{transform:translateX(22px)}
+.ov{display:none}.ov.show{display:block}
+.ov-card{display:none}.ov-card.show{display:block}
+.bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.08);z-index:30}
+.bar .inner{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px 14px}
+.verdict{flex:1;display:flex;flex-direction:column;justify-content:center}
+.verdict .vk{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:1px}
+.verdict .vv{font-family:'Barlow Condensed';font-weight:700;font-size:23px;line-height:1.05}
+.verdict.ap .vv{color:var(--green)}.verdict.re .vv{color:var(--red)}.verdict.ov .vv{color:#b7791f}
+.save{border:none;background:var(--navy);color:#fff;border-radius:10px;padding:14px 20px;font-weight:700;font-size:15px;font-family:'Barlow Condensed';letter-spacing:.8px;text-transform:uppercase;cursor:pointer}
+.save:disabled{background:#aab4c0;cursor:not-allowed}
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;font-size:14px;z-index:50;opacity:0;transition:.25s;pointer-events:none;max-width:90%}
+.toast.show{opacity:1}.toast.ok{background:var(--green)}.toast.err{background:var(--red)}
+.hint{font-size:11px;color:var(--muted);margin-top:4px}
+.hint.warn{color:var(--red);font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">✿ LIVES</div>
+  <h1>Auditoría Final / Acabados</h1>
+  <div class="code">AC-009-25 · CALIDAD MANUFACTURA</div>
+</header>
+
+<div class="wrap">
+  <!-- CABECERA -->
+  <div class="card">
+    <div class="sec"><span class="dot"></span>Datos de la auditoría</div>
+    <div class="field"><label>N° de auditoría</label>
+      <div class="seg" id="segN"><button data-v="1ra">1ra</button><button data-v="2da" class="on">2da</button></div>
+    </div>
+    <div class="field"><label>Proceso *</label>
+      <select id="proceso">
+        <option value="">— Seleccionar —</option>
+        <option>Costura</option>
+        <option>Acabados (taller)</option>
+        <option>Acabados Final (interno)</option>
+      </select>
+    </div>
+    <div class="field" id="tallerWrap" style="display:none"><label>Taller *</label>
+      <select id="taller"><option value="">— Seleccionar —</option></select>
+      <div class="hint">Solo se muestran los talleres del proceso elegido.</div>
+    </div>
+    <div class="grid">
+      <div class="full"><label>Cliente *</label>
+        <select id="cliente"><option value="">— Seleccionar —</option>
+          <option value="EFI|Eileen Fisher">Eileen Fisher (EFI)</option>
+          <option value="PAK|Paka">Paka (PAK)</option>
+          <option value="THY|Theory">Theory (THY)</option>
+          <option value="VIN|Vince">Vince (VIN)</option>
+          <option value="OTRO|Otro">Otro…</option>
+        </select></div>
+      <div><label>Grupo</label><input id="grupo" placeholder="EFI-102"></div>
+      <div><label>Estilo LIVES</label><input id="estiloL" placeholder="24647"></div>
+      <div><label>Estilo cliente</label><input id="estiloC" placeholder="QRKRS-T6539M"></div>
+      <div><label>PO *</label><input id="po" inputmode="numeric" placeholder="6002469"></div>
+      <div><label>Color</label><input id="color" placeholder="White"></div>
+      <div><label>Destino</label><input id="destino" placeholder="USA (SEA)"></div>
+      <div><label>Cant. pedido</label><input id="pedido" inputmode="numeric" placeholder="500"></div>
+      <div><label>Total recibido *</label><input id="recibido" inputmode="numeric" placeholder="503"></div>
+      <div class="full"><label>Lote real (inicial) *</label><input id="loteReal" inputmode="numeric" placeholder="≥ recibido">
+        <div class="hint" id="loteHint">El tamaño real del lote. En el reporte se cuenta una sola vez por proceso, aunque se reaudite.</div></div>
+      <div class="full"><label>Auditor *</label><input id="auditor" list="auditoras" autocomplete="off" placeholder="Escribe y selecciona tu nombre">
+        <datalist id="auditoras"></datalist></div>
+      <div><label>Fecha *</label><input id="fecha" type="date"></div>
+      <div><label>Semana</label><input id="semana" inputmode="numeric" placeholder="25"></div>
+    </div>
+  </div>
+
+  <!-- AQL -->
+  <div class="card">
+    <div class="sec"><span class="dot"></span>Nivel AQL · muestreo</div>
+    <div class="toggle lic">
+      <div><div style="font-weight:600;font-size:14px">¿Es licencia? (inspección 100%)</div>
+        <div class="hint" style="margin-top:2px">La muestra pasa a ser el total recibido y el lote queda aprobado.</div></div>
+      <label class="switch"><input type="checkbox" id="licSwitch"><span class="slider"></span></label>
+    </div>
+    <div class="field"><label>Nivel AQL</label>
+      <div class="seg" id="segA"><button data-v="1.0">1.0</button><button data-v="1.5" class="on">1.5</button><button data-v="2.5">2.5</button></div>
+    </div>
+    <div class="aql">
+      <div class="cell"><div class="k">Lote</div><div class="v" id="aLote">—</div></div>
+      <div class="cell"><div class="k">Muestra</div><div class="v" id="aMuestra">—</div></div>
+      <div class="cell acep"><div class="k">Acepta ≤</div><div class="v" id="aAcepta">—</div></div>
+      <div class="cell rech"><div class="k">Rechaza ≥</div><div class="v" id="aRechaza">—</div></div>
+    </div>
+  </div>
+
+  <!-- DEFECTOS -->
+  <div class="card">
+    <div class="sec"><span class="dot"></span>Defectos de calidad</div>
+    <div class="chips" id="chips"></div>
+    <div id="defs"></div>
+    <button class="addbtn" id="add">+ Agregar defecto</button>
+    <div class="total-def"><span>Total de defectos</span><b id="totDef">0</b></div>
+  </div>
+
+  <!-- MEDIDAS (informativo) -->
+  <div class="card">
+    <div class="sec"><span class="dot"></span>Medidas (informativo)</div>
+    <div class="grid">
+      <div><label>Muestra medidas</label><input id="medMuestra" inputmode="numeric" placeholder="—"></div>
+      <div><label>Def. medidas</label><input id="medDef" inputmode="numeric" placeholder="—"></div>
+      <div class="full"><label>Resultado medidas</label>
+        <select id="medRes"><option value="">— Seleccionar —</option><option>Aprobado</option><option>Rechazado</option></select></div>
+    </div>
+    <div class="hint">Se guarda como referencia. No afecta el veredicto de calidad ni el reporte.</div>
+  </div>
+
+  <!-- OVERRIDE -->
+  <div class="card ov-card" id="ovCard">
+    <div class="sec" style="color:#b7791f"><span class="dot" style="background:#b7791f"></span>Pase al rechazo (override)</div>
+    <div class="toggle ovr">
+      <div><div style="font-weight:600;font-size:14px">Dar pase a un lote rechazado</div>
+        <div class="hint" style="margin-top:2px">Queda registrado como excepción, no como aprobación normal.</div></div>
+      <label class="switch"><input type="checkbox" id="ovSwitch"><span class="slider" style=""></span></label>
+    </div>
+    <div class="ov" id="ovFields" style="margin-top:10px">
+      <div class="field"><label>¿Quién autoriza? *</label><input id="ovWho" placeholder="Ej. Jefa Sandra"></div>
+      <div class="field"><label>Motivo *</label><textarea id="ovWhy" rows="2" placeholder="Ej. Dio pase al rechazo"></textarea></div>
+    </div>
+  </div>
+</div>
+
+<div class="bar"><div class="inner">
+  <div class="verdict" id="verdict"><div class="vk">Veredicto</div><div class="vv" id="vText">—</div></div>
+  <button class="save" id="save" disabled>Guardar</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== CONFIG: reemplaza ambos al desplegar ===== */
+const APP_URL  = 'https://script.google.com/macros/s/PEGA_AQUI_TU_EXEC/exec';
+const SHEET_ID = 'PEGA_AQUI_EL_ID_DEL_SHEET';
+
+/* ===== AQL ===== */
+const AQL=[{min:2,max:8,n:2,a:{'1.0':0,'1.5':0,'2.5':0}},{min:9,max:15,n:3,a:{'1.0':0,'1.5':0,'2.5':0}},
+{min:16,max:25,n:5,a:{'1.0':0,'1.5':0,'2.5':0}},{min:26,max:50,n:8,a:{'1.0':0,'1.5':0,'2.5':0}},
+{min:51,max:90,n:13,a:{'1.0':0,'1.5':0,'2.5':1}},{min:91,max:150,n:20,a:{'1.0':0,'1.5':1,'2.5':1}},
+{min:151,max:280,n:32,a:{'1.0':1,'1.5':1,'2.5':2}},{min:281,max:500,n:50,a:{'1.0':1,'1.5':2,'2.5':3}},
+{min:501,max:1200,n:80,a:{'1.0':2,'1.5':3,'2.5':5}},{min:1201,max:3200,n:125,a:{'1.0':3,'1.5':5,'2.5':7}},
+{min:3201,max:10000,n:200,a:{'1.0':5,'1.5':7,'2.5':10}}];
+function aqlFor(l,niv){const r=AQL.find(x=>l>=x.min&&l<=x.max);return r?{muestra:r.n,acepta:r.a[niv],rechaza:r.a[niv]+1}:null;}
+
+/* ===== CATÁLOGO defectos ===== */
+const CAT=[['AC01','Acabados','Mal Vaporizado'],['AC02','Acabados','Prenda quemada'],['AC03','Acabados','Falla de Estampado/Bordado'],
+['AC04','Acabados','Botón mal ubicado'],['AC05','Acabados','Botón Faltante/Incorrecto/Roto'],['AC06','Acabados','Broche Faltante/Incorrecto'],
+['AC07','Acabados','Marca por brillo de plancha'],['AC08','Acabados','Mal doblado'],['AC09','Acabados','Etiqueta marca/Talla: Faltante/Incorrecto/Quemado'],
+['AC10','Acabados','Etiqueta Contenido/origen: Faltante/Incorrecto'],['AC11','Acabados','Marcas de colgador'],['AC12','Acabados','Tallas Mezcladas'],
+['AC13','Acabados','Prendas Húmedas'],['AC14','Acabados','Faldones Desiguales x plancha'],['AC15','Acabados','Medidas Fuera de Tolerancia'],
+['AC16','Acabados','Otros (Acabados)'],['CO01','Costura','Puntada: Saltada/cortada'],['CO02','Costura','Manchas: Aceite/tinte/suciedad'],
+['CO03','Costura','Costura: Abierta/desgarrada/Vaciada'],['CO04','Costura','Costura: Recogida/Revirada'],['CO05','Costura','Tensiones: Sueltas/Ajustada/Acordonada'],
+['CO06','Costura','Hilo Incorrectas'],['CO07','Costura','Etiquetas Faltante/Mal ubicada'],['CO08','Costura','Pechera: Inclinado/Asimétrico'],
+['CO09','Costura','Cuello: Asimétrico/Deforme'],['CO10','Costura','Falta Atraques'],['CO11','Costura','Asimetría de'],
+['CO12','Costura','Bolsillos: Inclinado/Deforme/Mal ubicado'],['CO13','Costura','Picado de aguja'],['CO14','Costura','Marca de reproceso'],
+['CO15','Costura','Bastas: Ondeado/Revirado/Desigual'],['CO16','Costura','Pliegues de Costura'],['CO17','Costura','Hilos: Sueltos/Por recortar'],
+['CO18','Costura','Borde Crudo: Deforme, Jalado'],['CO19','Costura','Cierre: Ondeado/Malogrado/Recogido'],['CO20','Costura','Otros (Costura)']];
+const FRECUENTES=['CO02','CO17','CO01','AC15','AC01'];
+
+/* ===== listas dinámicas (Sheet) ===== */
+let TALLERES=[], AUDITORAS=[];
+async function gviz(tab){
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}`;
+  const r=await fetch(url); const t=await r.text();
+  const j=JSON.parse(t.substring(t.indexOf('{'),t.lastIndexOf('}')+1));
+  return (j.table.rows||[]).map(row=>(row.c||[]).map(c=>c&&c.v!=null?String(c.v):''));
+}
+async function loadLists(){
+  try{
+    TALLERES=(await gviz('TALLERES')).filter(r=>r[1]&&!r[1].startsWith('—'));
+    AUDITORAS=(await gviz('AUDITORAS')).map(r=>r[0]).filter(n=>n&&!n.startsWith('—'));
+    const dl=document.getElementById('auditoras'); dl.innerHTML='';
+    AUDITORAS.forEach(n=>{const o=document.createElement('option');o.value=n;dl.appendChild(o);});
+    if(S.proceso) fillTaller(S.proceso);
+  }catch(e){/* si falla, el form sigue usable y las listas se llenan luego */}
+}
+function fillTaller(proc){
+  const sel=document.getElementById('taller');
+  sel.innerHTML='<option value="">— Seleccionar —</option>';
+  TALLERES.filter(t=>t[0]===proc).forEach(t=>{const o=document.createElement('option');o.value=t[1];o.textContent=t[1];sel.appendChild(o);});
+}
+
+/* ===== ESTADO ===== */
+const S={nAud:'2da',proceso:'',int_ext:'',nivel:'1.5',defs:[],override:false,licencia:false};
+let defId=0;
+const $=id=>document.getElementById(id);
+
+/* ===== segmented ===== */
+function bindSeg(id,key,after){document.querySelectorAll('#'+id+' button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');S[key]=b.dataset.v;after&&after();});}
+bindSeg('segN','nAud'); bindSeg('segA','nivel',recalc);
+
+/* ===== proceso → taller + int_ext ===== */
+$('proceso').onchange=()=>{
+  S.proceso=$('proceso').value;
+  const interno=S.proceso==='Acabados Final (interno)';
+  S.int_ext=S.proceso?(interno?'LIVES':'EXTERNO'):'';
+  $('tallerWrap').style.display=(S.proceso&&!interno)?'block':'none';
+  fillTaller(S.proceso); validate();
+};
+$('taller').onchange=validate;
+
+/* ===== licencia ===== */
+$('licSwitch').onchange=()=>{S.licencia=$('licSwitch').checked;recalc();};
+
+/* ===== AQL en vivo ===== */
+function recalc(){
+  const lote=parseInt($('recibido').value)||0, lic=S.licencia;
+  let muestra='—',acepta='—',rechaza='—',acceptNum=null;
+  if(lic&&lote){muestra=lote;acepta='100%';rechaza='—';acceptNum=lote;}
+  else{const q=aqlFor(lote,S.nivel); if(q){muestra=q.muestra;acepta=q.acepta;rechaza=q.rechaza;acceptNum=q.acepta;}}
+  $('aLote').textContent=lote||'—'; $('aMuestra').textContent=muestra; $('aAcepta').textContent=acepta; $('aRechaza').textContent=rechaza;
+  const tot=S.defs.reduce((s,d)=>s+(parseInt(d.cant)||0),0); $('totDef').textContent=tot;
+  const v=$('verdict'),vt=$('vText'),ov=$('ovCard'); v.className='verdict';
+  if(!lote){vt.textContent='—';ov.classList.remove('show');}
+  else if(lic){v.classList.add('ap');vt.textContent='APROBADO (LICENCIA)';ov.classList.remove('show');resetOv();}
+  else if(acceptNum!=null&&tot<=acceptNum){v.classList.add('ap');vt.textContent='APROBADO';ov.classList.remove('show');resetOv();}
+  else{if(S.override){v.classList.add('ov');vt.textContent='APROBADO (OVERRIDE)';}else{v.classList.add('re');vt.textContent='RECHAZADO';}ov.classList.add('show');}
+  // lote real >= recibido
+  const lr=parseInt($('loteReal').value)||0;
+  $('loteHint').className='hint'+((lr&&lote&&lr<lote)?' warn':'');
+  $('loteHint').textContent=(lr&&lote&&lr<lote)?'El lote real no puede ser menor que el total recibido.':'El tamaño real del lote. En el reporte se cuenta una sola vez por proceso, aunque se reaudite.';
+  validate();
+}
+function resetOv(){S.override=false;$('ovSwitch').checked=false;$('ovFields').classList.remove('show');}
+
+/* ===== defectos ===== */
+function catOpts(sec,sel){return CAT.filter(c=>!sec||c[1]===sec).map(c=>`<option value="${c[2]}" ${c[2]===sel?'selected':''}>${c[2]}</option>`).join('');}
+function addDef(preCod){
+  const id=++defId, pre=preCod?CAT.find(c=>c[0]===preCod):null;
+  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',cant:1,detalle:'',foto:''};
+  S.defs.push(d);
+  const el=document.createElement('div');el.className='def';
+  el.innerHTML=`<button class="rm">×</button>
+    <div class="grid">
+      <div><label>Sección</label><select class="dSec"><option ${d.seccion==='Acabados'?'selected':''}>Acabados</option><option ${d.seccion==='Costura'?'selected':''}>Costura</option></select></div>
+      <div><label>Cantidad</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
+      <div class="full"><label>Categoría</label><select class="dCat">${catOpts(d.seccion,d.categoria)}</select></div>
+      <div class="full"><label>Detalle / nota</label><input class="dDet" placeholder="Ej. hilo contaminado negro"></div>
+    </div>
+    <div class="photo"><label class="btn">📷 Foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label><img class="dPrev" style="display:none"><span class="hint dFn">Sin foto</span></div>`;
+  $('defs').appendChild(el);
+  const q=s=>el.querySelector(s);
+  q('.rm').onclick=()=>{S.defs=S.defs.filter(x=>x.id!==id);el.remove();recalc();};
+  q('.dSec').onchange=e=>{d.seccion=e.target.value;q('.dCat').innerHTML=catOpts(d.seccion,'');d.categoria=q('.dCat').value;};
+  q('.dCat').onchange=e=>d.categoria=e.target.value; if(pre)d.categoria=pre[2];
+  q('.dDet').oninput=e=>d.detalle=e.target.value;
+  q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
+  q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
+  q('.dCant').oninput=e=>{d.cant=parseInt(e.target.value)||0;recalc();};
+  q('.dFoto').onchange=e=>{const f=e.target.files[0];if(!f)return;shrink(f,b64=>{d.foto=b64;const im=q('.dPrev');im.src=b64;im.style.display='block';q('.dFn').textContent='Foto lista';});};
+  recalc();
+}
+$('add').onclick=()=>addDef();
+const chipsEl=$('chips');
+FRECUENTES.forEach(cod=>{const c=CAT.find(x=>x[0]===cod);if(!c)return;const b=document.createElement('button');b.className='chip';b.textContent='+ '+c[2].split(':')[0];b.onclick=()=>addDef(cod);chipsEl.appendChild(b);});
+
+/* ===== foto ===== */
+function shrink(file,cb){const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const max=1000,sc=Math.min(1,max/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=img.width*sc;cv.height=img.height*sc;cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);cb(cv.toDataURL('image/jpeg',0.7));};img.src=r.result;};r.readAsDataURL(file);}
+
+/* ===== override ===== */
+$('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').classList.toggle('show',S.override);recalc();};
+['ovWho','ovWhy'].forEach(id=>$(id).oninput=validate);
+
+/* ===== validación ===== */
+function v(id){return ($(id).value||'').trim();}
+function validate(){
+  const lote=parseInt(v('recibido'))||0, lr=parseInt(v('loteReal'))||0;
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&$('cliente').value&&S.proceso&&lr&&lr>=lote;
+  if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
+  if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
+  $('save').disabled=!ok;
+}
+['po','recibido','loteReal','auditor','fecha','semana','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
+$('cliente').onchange=validate;
+
+/* ===== guardar ===== */
+function toast(m,t){const e=$('toast');e.textContent=m;e.className='toast show '+(t||'');setTimeout(()=>e.className='toast',2800);}
+$('save').onclick=async()=>{
+  const btn=$('save');btn.disabled=true;btn.textContent='Guardando…';
+  const [cod,nom]=$('cliente').value.split('|');
+  const interno=S.proceso==='Acabados Final (interno)';
+  const recibido=parseInt(v('recibido'))||0;
+  const payload={
+    cliente_cod:cod,cliente:nom,fecha:v('fecha'),n_auditoria:S.nAud,proceso:S.proceso,int_ext:S.int_ext,
+    servicio:interno?'Acabados Final':v('taller'),grupo:v('grupo'),estilo_lives:v('estiloL'),estilo_cliente:v('estiloC'),
+    po:v('po'),color:v('color'),destino:v('destino'),cant_pedido:parseInt(v('pedido'))||'',total_recibido:recibido,
+    lote_real:parseInt(v('loteReal'))||recibido,licencia:S.licencia?'SÍ':'NO',nivel_aql:parseFloat(S.nivel),
+    override:S.override?'SÍ':'NO',override_autoriza:v('ovWho'),override_motivo:v('ovWhy'),
+    muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
+    auditor:v('auditor'),semana:parseInt(v('semana'))||'',
+    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto}))
+  };
+  try{
+    const res=await fetch(APP_URL,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    const data=await res.json();
+    if(data.ok){toast('Guardada '+data.id+' · '+data.resultado,'ok');setTimeout(()=>location.reload(),2200);}
+    else throw new Error(data.error||'Error');
+  }catch(err){toast('No se pudo guardar. '+err.message,'err');btn.disabled=false;btn.textContent='Guardar';}
+};
+
+/* init */
+$('fecha').valueAsDate=new Date();
+loadLists(); recalc();
+</script>
+</body>
+</html>
