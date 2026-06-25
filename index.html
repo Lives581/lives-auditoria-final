@@ -89,7 +89,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
     <div class="field"><label>Proceso *</label>
       <select id="proceso">
         <option value="">— Seleccionar —</option>
-        <option>Costura</option>
+        <option>Costura (taller)</option>
         <option>Acabados (taller)</option>
         <option>Acabados Final (interno)</option>
       </select>
@@ -99,15 +99,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
       <div class="hint">Solo se muestran los talleres del proceso elegido.</div>
     </div>
     <div class="grid">
-      <div class="full"><label>Cliente *</label>
-        <select id="cliente"><option value="">— Seleccionar —</option>
-          <option value="EFI|Eileen Fisher">Eileen Fisher (EFI)</option>
-          <option value="PAK|Paka">Paka (PAK)</option>
-          <option value="THY|Theory">Theory (THY)</option>
-          <option value="VIN|Vince">Vince (VIN)</option>
-          <option value="OTRO|Otro">Otro…</option>
-        </select></div>
-      <div><label>Grupo</label><input id="grupo" placeholder="EFI-102"></div>
+      <div><label>Grupo *</label><input id="grupo" list="grupos" autocomplete="off" placeholder="EFI-102">
+        <datalist id="grupos"></datalist></div>
+      <div class="full"><label>Cliente (automático)</label>
+        <input id="cliente" readonly placeholder="Se completa según el grupo" style="background:#eef3f1;font-weight:600;color:var(--green)">
+        <div class="hint" id="cliHint">Escribe el grupo y el cliente aparece solo.</div></div>
       <div><label>Estilo LIVES</label><input id="estiloL" placeholder="24647"></div>
       <div><label>Estilo cliente</label><input id="estiloC" placeholder="QRKRS-T6539M"></div>
       <div><label>PO *</label><input id="po" inputmode="numeric" placeholder="6002469"></div>
@@ -119,8 +115,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
         <div class="hint" id="loteHint">El tamaño real del lote. En el reporte se cuenta una sola vez por proceso, aunque se reaudite.</div></div>
       <div class="full"><label>Auditor *</label><input id="auditor" list="auditoras" autocomplete="off" placeholder="Escribe y selecciona tu nombre">
         <datalist id="auditoras"></datalist></div>
-      <div><label>Fecha *</label><input id="fecha" type="date"></div>
-      <div><label>Semana</label><input id="semana" inputmode="numeric" placeholder="25"></div>
+      <div class="full"><label>Fecha *</label><input id="fecha" type="date"></div>
     </div>
   </div>
 
@@ -224,7 +219,7 @@ function normSec(s){
 }
 
 /* ===== listas dinámicas (Sheet) ===== */
-let TALLERES=[], AUDITORAS=[];
+let TALLERES=[], AUDITORAS=[], CLIENTES=[];
 async function gviz(tab){
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}`;
   const r=await fetch(url); const t=await r.text();
@@ -245,7 +240,28 @@ async function loadLists(){
                   .map(r=>[r[0].trim(), normSec(r[1]), r[2].trim()]);
     if(cat.length){ CAT=cat; }
   }catch(e){/* si falla, CAT queda vacío y se avisa */}
+  try{
+    const rows=await gviz('CLIENTES');               // A=PREFIJO, B=CLIENTE
+    CLIENTES=rows.filter(r=>r[0]&&r[0].toUpperCase()!=='PREFIJO'&&r[1])
+                 .map(r=>[r[0].trim().toUpperCase(), r[1].trim()]);
+  }catch(e){/* si falla, cliente queda manual-vacío */}
   buildChips();
+}
+
+/* ===== cliente automático desde el prefijo del grupo ===== */
+function clienteDeGrupo(grupo){
+  if(!grupo) return '';
+  const pre=String(grupo).substring(0,3).toUpperCase();
+  const hit=CLIENTES.find(c=>c[0]===pre);
+  return hit?hit[1]:'';
+}
+function aplicarCliente(){
+  const cli=clienteDeGrupo($('grupo').value);
+  $('cliente').value=cli;
+  const h=$('cliHint');
+  if($('grupo').value && !cli){ h.className='hint warn'; h.textContent='Ese prefijo no está en la lista de clientes. Revisa el grupo.'; }
+  else { h.className='hint'; h.textContent='Escribe el grupo y el cliente aparece solo.'; }
+  validate();
 }
 function fillTaller(proc){
   const sel=document.getElementById('taller');
@@ -381,19 +397,19 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 function v(id){return ($(id).value||'').trim();}
 function validate(){
   const lote=parseInt(v('recibido'))||0, lr=parseInt(v('loteReal'))||0;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&$('cliente').value&&S.proceso&&lr&&lr>=lote;
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&S.proceso&&lr&&lr>=lote;
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
 }
-['po','recibido','loteReal','auditor','fecha','semana','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
-$('cliente').onchange=validate;
+['po','recibido','loteReal','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
+$('grupo').addEventListener('input',aplicarCliente);
 
 /* ===== guardar ===== */
 function toast(m,t){const e=$('toast');e.textContent=m;e.className='toast show '+(t||'');setTimeout(()=>e.className='toast',2800);}
 $('save').onclick=async()=>{
   const btn=$('save');btn.disabled=true;btn.textContent='Guardando…';
-  const [cod,nom]=$('cliente').value.split('|');
+  const nom=$('cliente').value; const cod=(v('grupo').substring(0,3)||'AUD').toUpperCase();
   const interno=S.proceso==='Acabados Final (interno)';
   const recibido=parseInt(v('recibido'))||0;
   const payload={
@@ -403,7 +419,7 @@ $('save').onclick=async()=>{
     lote_real:parseInt(v('loteReal'))||recibido,licencia:S.licencia?'SÍ':'NO',nivel_aql:parseFloat(S.nivel),
     override:S.override?'SÍ':'NO',override_autoriza:v('ovWho'),override_motivo:v('ovWhy'),
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
-    auditor:v('auditor'),semana:parseInt(v('semana'))||'',
+    auditor:v('auditor'),
     defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto})),
     derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle}))
   };
