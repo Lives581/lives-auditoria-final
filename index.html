@@ -83,8 +83,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
   <!-- CABECERA -->
   <div class="card">
     <div class="sec"><span class="dot"></span>Datos de la auditoría</div>
-    <div class="field"><label>N° de auditoría</label>
-      <div class="seg" id="segN"><button data-v="1ra">1ra</button><button data-v="2da" class="on">2da</button></div>
+    <div class="grid">
+      <div><label>N° de auditoría (automático)</label>
+        <input id="ordinal" readonly placeholder="—" style="background:#eef3f1;font-weight:700;color:var(--navy);text-align:center">
+        <div class="hint" id="ordHint">Se calcula según las auditorías previas del mismo tipo.</div>
+      </div>
+      <div><label>¿Reproceso?</label>
+        <div class="toggle ovr" style="margin:0;padding:9px 12px">
+          <div style="font-weight:600;font-size:13px">Reproceso</div>
+          <label class="switch"><input type="checkbox" id="reproSwitch"><span class="slider"></span></label>
+        </div>
+        <div class="hint">Si es reproceso, no suma al reporte.</div>
+      </div>
     </div>
     <div class="field"><label>Proceso *</label>
       <select id="proceso">
@@ -226,6 +236,44 @@ async function gviz(tab){
   const j=JSON.parse(t.substring(t.indexOf('{'),t.lastIndexOf('}')+1));
   return (j.table.rows||[]).map(row=>(row.c||[]).map(c=>c&&c.v!=null?String(c.v):''));
 }
+
+/* ===== AUDITORÍAS en vivo (para ordinal, pedido y panel) ===== */
+async function cargarAud(){
+  try{ AUD_CACHE=await gviz('AUDITORÍAS'); }catch(e){ AUD_CACHE=[]; }
+  return AUD_CACHE;
+}
+function norm(v){ return String(v==null?'':v).trim().toUpperCase(); }
+// Llave de lote = grupo+estilo_lives+estilo_cliente+color+po (col H,I,J,L,K = idx 7,8,9,11,10)
+function llaveActual(){
+  return [norm($('grupo').value),norm($('estiloL').value),norm($('estiloC').value),norm($('color').value),norm($('po').value)].join('|');
+}
+function llaveFila(r){
+  // r = fila de AUDITORÍAS (array). idx: H=7 grupo, I=8 estLives, J=9 estCli, K=10 po, L=11 color, D=3 proceso
+  return [norm(r[7]),norm(r[8]),norm(r[9]),norm(r[11]),norm(r[10])].join('|');
+}
+function loteCompleto(){
+  return $('grupo').value&&$('estiloL').value&&$('estiloC').value&&$('color').value&&$('po').value&&S.proceso;
+}
+function ordinalTexto(n){
+  const t={1:'1ra',2:'2da',3:'3ra'}; return t[n]||(n+'ta');
+}
+async function calcOrdinal(){
+  const out=$('ordinal'), h=$('ordHint');
+  if(!loteCompleto()){ out.value='—'; S.nAud=''; h.className='hint'; h.textContent='Completa grupo, estilo, PO, color y proceso.'; validate(); return; }
+  out.value='Calculando…'; h.className='hint'; h.textContent='Buscando auditorías previas…';
+  if(!AUD_CACHE) await cargarAud();
+  const key=llaveActual(), proc=norm(S.proceso);
+  let previas=0;
+  (AUD_CACHE||[]).forEach(r=>{
+    if(!r||r[0]==null||norm(r[0])==='ID_AUDITORIA') return;
+    if(llaveFila(r)===key && norm(r[3])===proc) previas++;
+  });
+  const n=previas+1; S.nAud=ordinalTexto(n);
+  out.value=S.nAud;
+  h.className='hint'; h.textContent=previas? (previas+' auditoría(s) previa(s) de este tipo en el lote') : 'Primera auditoría de este tipo en el lote';
+  validate();
+}
+function pedirOrdinal(){ clearTimeout(ordTimer); ordTimer=setTimeout(calcOrdinal,400); }
 async function loadLists(){
   try{
     TALLERES=(await gviz('TALLERES')).filter(r=>r[1]&&!r[1].startsWith('—'));
@@ -270,24 +318,30 @@ function fillTaller(proc){
 }
 
 /* ===== ESTADO ===== */
-const S={nAud:'2da',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false};
+const S={nAud:'',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false,reproceso:false};
+let AUD_CACHE=null;       // filas de la hoja AUDITORÍAS (para ordinal/pedido/panel)
+let ordTimer=null;
 let defId=0;
 const $=id=>document.getElementById(id);
 
 /* ===== segmented ===== */
 function bindSeg(id,key,after){document.querySelectorAll('#'+id+' button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');S[key]=b.dataset.v;after&&after();});}
-bindSeg('segN','nAud'); bindSeg('segA','nivel',recalc);
+bindSeg('segA','nivel',recalc);
 
 /* ===== proceso → taller + int_ext ===== */
 $('proceso').onchange=()=>{
   S.proceso=$('proceso').value;
   const interno=S.proceso==='Acabados Final (interno)';
-  S.int_ext=S.proceso?(interno?'LIVES':'EXTERNO'):'';
+  S.int_ext=S.proceso?(interno?'INTERNA':'EXTERNA'):'';
   $('tallerWrap').style.display=(S.proceso&&!interno)?'block':'none';
-  fillTaller(S.proceso); validate();
+  fillTaller(S.proceso);
+  pedirOrdinal(); validate();
 };
 $('taller').onchange=validate;
+
+/* ===== reproceso ===== */
+$('reproSwitch').onchange=()=>{S.reproceso=$('reproSwitch').checked;recalc();};
 
 /* ===== licencia ===== */
 $('licSwitch').onchange=()=>{S.licencia=$('licSwitch').checked;recalc();};
@@ -397,13 +451,14 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 function v(id){return ($(id).value||'').trim();}
 function validate(){
   const lote=parseInt(v('recibido'))||0, lr=parseInt(v('loteReal'))||0;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&S.proceso&&lr&&lr>=lote;
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&S.proceso&&S.nAud&&lr&&lr>=lote;
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
 }
 ['po','recibido','loteReal','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('grupo').addEventListener('input',aplicarCliente);
+['grupo','estiloL','estiloC','color','po'].forEach(id=>$(id).addEventListener('input',pedirOrdinal));
 
 /* ===== guardar ===== */
 function toast(m,t){const e=$('toast');e.textContent=m;e.className='toast show '+(t||'');setTimeout(()=>e.className='toast',2800);}
@@ -413,7 +468,7 @@ $('save').onclick=async()=>{
   const interno=S.proceso==='Acabados Final (interno)';
   const recibido=parseInt(v('recibido'))||0;
   const payload={
-    cliente_cod:cod,cliente:nom,fecha:v('fecha'),n_auditoria:S.nAud,proceso:S.proceso,int_ext:S.int_ext,
+    cliente_cod:cod,cliente:nom,fecha:v('fecha'),n_auditoria:S.nAud,proceso:S.proceso,int_ext:S.int_ext,reproceso:S.reproceso?'SÍ':'NO',
     servicio:interno?'Acabados Final':v('taller'),grupo:v('grupo'),estilo_lives:v('estiloL'),estilo_cliente:v('estiloC'),
     po:v('po'),color:v('color'),destino:v('destino'),cant_pedido:parseInt(v('pedido'))||'',total_recibido:recibido,
     lote_real:parseInt(v('loteReal'))||recibido,licencia:S.licencia?'SÍ':'NO',nivel_aql:parseFloat(S.nivel),
@@ -433,7 +488,7 @@ $('save').onclick=async()=>{
 
 /* init */
 $('fecha').valueAsDate=new Date();
-loadLists(); recalc();
+loadLists(); cargarAud(); recalc();
 </script>
 </body>
 </html>
