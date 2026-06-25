@@ -119,7 +119,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
       <div><label>PO *</label><input id="po" inputmode="numeric" placeholder="6002469"></div>
       <div><label>Color</label><input id="color" placeholder="White"></div>
       <div><label>Destino</label><input id="destino" placeholder="USA (SEA)"></div>
-      <div><label>Cant. pedido</label><input id="pedido" inputmode="numeric" placeholder="500"></div>
+      <div><label>Cant. pedido *</label><input id="pedido" inputmode="numeric" placeholder="500">
+        <div class="hint" id="pedHint"></div></div>
       <div><label>Total recibido *</label><input id="recibido" inputmode="numeric" placeholder="503"></div>
       <div class="full"><label>Lote real (inicial) *</label><input id="loteReal" inputmode="numeric" placeholder="≥ recibido">
         <div class="hint" id="loteHint">El tamaño real del lote. En el reporte se cuenta una sola vez por proceso, aunque se reaudite.</div></div>
@@ -173,7 +174,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
     <div class="sec"><span class="dot"></span>Medidas (informativo)</div>
     <div class="grid">
       <div><label>Muestra medidas</label><input id="medMuestra" inputmode="numeric" placeholder="—"></div>
-      <div><label>Def. medidas</label><input id="medDef" inputmode="numeric" placeholder="—"></div>
+      <div><label>Def. medidas</label><input id="medDef" inputmode="numeric" maxlength="3" placeholder="1/2">
+        <div class="hint">Escribe 2 números: el "/" sale solo (ej. 1/2).</div></div>
       <div class="full"><label>Resultado medidas</label>
         <select id="medRes"><option value="">— Seleccionar —</option><option>Aprobado</option><option>Rechazado</option></select></div>
     </div>
@@ -271,9 +273,42 @@ async function calcOrdinal(){
   const n=previas+1; S.nAud=ordinalTexto(n);
   out.value=S.nAud;
   h.className='hint'; h.textContent=previas? (previas+' auditoría(s) previa(s) de este tipo en el lote') : 'Primera auditoría de este tipo en el lote';
+  aplicarPedido();
   validate();
 }
 function pedirOrdinal(){ clearTimeout(ordTimer); ordTimer=setTimeout(calcOrdinal,400); }
+
+/* ===== máscara Def. medidas: N/M (1 dígito por lado) ===== */
+function maskMedidas(e){
+  let val=e.target.value.replace(/[^0-9]/g,'');   // solo dígitos
+  if(val.length>=1){
+    val=val.substring(0,2);                        // máximo 2 dígitos
+    e.target.value = val.length===1 ? val+'/' : val[0]+'/'+val[1];
+  } else { e.target.value=''; }
+}
+
+/* ===== Pedido: autocompletar + bloquear según lote previo ===== */
+function aplicarPedido(){
+  const inp=$('pedido'), h=$('pedHint');
+  if(!loteCompleto()){ inp.readOnly=false; inp.style.background='#fbfcfd'; h.className='hint'; h.textContent=''; return; }
+  const key=llaveActual();
+  let prevPedido='';
+  (AUD_CACHE||[]).forEach(r=>{
+    if(!r||norm(r[0])==='ID_AUDITORIA') return;
+    if(llaveFila(r)===key){
+      const ped=r[13];                             // N = CANT_PEDIDO (idx 13)
+      if(ped && String(ped).trim()!=='') prevPedido=String(ped).trim();
+    }
+  });
+  if(prevPedido){
+    inp.value=prevPedido; inp.readOnly=true; inp.style.background='#eef3f1';
+    h.className='hint'; h.textContent='Pedido ya registrado para este lote. Bloqueado.';
+  } else {
+    inp.readOnly=false; inp.style.background='#fbfcfd';
+    h.className='hint'; h.textContent='Aún nadie puso el pedido de este lote. Escríbelo tú.';
+  }
+  validate();
+}
 async function loadLists(){
   try{
     TALLERES=(await gviz('TALLERES')).filter(r=>r[1]&&!r[1].startsWith('—'));
@@ -344,7 +379,9 @@ $('taller').onchange=validate;
 $('reproSwitch').onchange=()=>{S.reproceso=$('reproSwitch').checked;recalc();};
 
 /* ===== licencia ===== */
-$('licSwitch').onchange=()=>{S.licencia=$('licSwitch').checked;recalc();};
+$('licSwitch').onchange=()=>{S.licencia=$('licSwitch').checked;
+  // En licencia la muestra = recibido (100%): el formulario ya lo refleja en el panel AQL.
+  recalc();};
 
 /* ===== AQL en vivo ===== */
 function recalc(){
@@ -451,13 +488,14 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 function v(id){return ($(id).value||'').trim();}
 function validate(){
   const lote=parseInt(v('recibido'))||0, lr=parseInt(v('loteReal'))||0;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&S.proceso&&S.nAud&&lr&&lr>=lote;
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&S.proceso&&S.nAud&&lr&&lr>=lote;
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
 }
 ['po','recibido','loteReal','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('grupo').addEventListener('input',aplicarCliente);
+$('medDef').addEventListener('input',maskMedidas);
 ['grupo','estiloL','estiloC','color','po'].forEach(id=>$(id).addEventListener('input',pedirOrdinal));
 
 /* ===== guardar ===== */
