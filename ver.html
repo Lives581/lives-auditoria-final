@@ -42,7 +42,9 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
 /* lightbox */
 #lb{display:none;position:fixed;inset:0;background:rgba(15,20,30,.92);z-index:100;align-items:center;justify-content:center;flex-direction:column}
 #lb.show{display:flex}
-#lb img{max-width:96vw;max-height:88vh;object-fit:contain;border-radius:6px}
+#lb .lbScroll{max-width:96vw;max-height:88vh;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pinch-zoom;border-radius:6px}
+#lb img{max-width:96vw;max-height:88vh;object-fit:contain;border-radius:6px;transition:transform .15s;transform-origin:center;cursor:zoom-in;display:block}
+#lb img.zoom{max-width:none;max-height:none;cursor:zoom-out}
 #lb .close{position:absolute;top:16px;right:20px;background:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:22px;cursor:pointer;font-weight:700}
 #lb .hint{color:#cdd; margin-top:12px;font-size:13px}
 .estado{padding:40px;text-align:center;color:#889}
@@ -53,11 +55,16 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
   body{background:#fff}
   .page{box-shadow:none;margin:0;max-width:none;padding:0}
   h2{break-after:avoid}
-  /* cada foto en su propia hoja, grande */
+  /* cada foto en su propia hoja, grande, SIN páginas en blanco */
   .fotos{display:block}
-  .fotos figure{break-before:page;break-inside:avoid;page-break-before:always;text-align:center;margin:0}
+  .fotos figure{break-inside:avoid;page-break-inside:avoid;text-align:center;margin:0}
+  /* salto SOLO entre fotos (no antes de la primera) */
+  .fotos figure + figure{break-before:page;page-break-before:always}
   .fotos img{width:100%;height:auto;max-height:96vh;aspect-ratio:auto;object-fit:contain;border:none}
-  .fotoblock .lab{break-after:avoid}
+  .fotoblock{break-inside:avoid}
+  .fotoblock .lab{break-after:avoid;break-inside:avoid}
+  /* el footer no fuerza página nueva */
+  .foot{break-before:avoid}
 }
 </style>
 </head>
@@ -74,8 +81,8 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
 
 <div id="lb" onclick="cerrarLb(event)">
   <button class="close" onclick="cerrarLb(event,true)">×</button>
-  <img id="lbImg" src="" alt="foto ampliada">
-  <div class="hint">Toca fuera de la imagen para cerrar</div>
+  <div class="lbScroll"><img id="lbImg" src="" alt="foto ampliada"></div>
+  <div class="hint">Rueda del mouse o pellizca para zoom · doble clic para acercar · toca fuera para cerrar</div>
 </div>
 
 <script>
@@ -229,8 +236,20 @@ function render(r,defs,ders){
   document.getElementById('page').innerHTML=html;
 }
 
-function abrirLb(src){ const lb=document.getElementById('lb'); document.getElementById('lbImg').src=src; lb.classList.add('show'); }
+let lbScale=1;
+function aplicarZoom(){ const im=document.getElementById('lbImg'); im.style.transform='scale('+lbScale+')'; im.classList.toggle('zoom',lbScale>1); }
+function abrirLb(src){ const lb=document.getElementById('lb'); lbScale=1; const im=document.getElementById('lbImg'); im.src=src; im.style.transform='scale(1)'; im.classList.remove('zoom'); lb.classList.add('show'); }
 function cerrarLb(e,force){ if(force||e.target.id==='lb'){ document.getElementById('lb').classList.remove('show'); } }
+// rueda del mouse para zoom
+document.addEventListener('wheel',function(e){
+  const lb=document.getElementById('lb'); if(!lb.classList.contains('show')) return;
+  if(e.target.id==='lbImg'||e.target.closest('.lbScroll')){ e.preventDefault();
+    lbScale += (e.deltaY<0?0.2:-0.2); lbScale=Math.max(1,Math.min(5,lbScale)); aplicarZoom(); }
+},{passive:false});
+// doble clic alterna zoom
+document.addEventListener('dblclick',function(e){
+  if(e.target.id==='lbImg'){ lbScale = lbScale>1?1:2.5; aplicarZoom(); }
+});
 
 cargar();
 </script>
