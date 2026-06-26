@@ -11,9 +11,10 @@ body{margin:0;font-family:'Barlow',system-ui,-apple-system,Segoe UI,Roboto,sans-
 .toolbar{position:sticky;top:0;background:var(--navy);color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;z-index:10}
 .toolbar h1{font-size:15px;margin:0;font-weight:700}
 .toolbar .acts{display:flex;gap:8px}
-.tbtn{border:none;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px}
+.tbtn{border:none;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px;min-width:150px;text-align:center}
 .tbtn.print{background:var(--amber);color:var(--navy)}
 .tbtn.fotos{background:#2a9d8f;color:#fff}
+.tbtn.proc{background:#e76f51;color:#fff}
 .tbtn.back{background:#33507e;color:#fff}
 .page{max-width:820px;margin:18px auto;background:#fff;padding:30px 34px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
 .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:12px;margin-bottom:16px}
@@ -69,7 +70,8 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
   <h1 id="ttl">Reporte de auditoría</h1>
   <div class="acts">
     <button class="tbtn back" onclick="location.href='buscar.html'">← Buscar</button>
-    <button class="tbtn fotos" id="btnFotos" onclick="verFotos()">🖼 Foto de medidas</button>
+    <button class="tbtn fotos" id="btnMed" onclick="verFotos('med')" style="display:none">🖼 Hojas de medidas</button>
+    <button class="tbtn proc" id="btnProc" onclick="verFotos('proc')" style="display:none">🖼 Medidas de proceso</button>
     <button class="tbtn print" onclick="window.print()">🖨 Imprimir datos</button>
   </div>
 </div>
@@ -144,6 +146,9 @@ function render(r,defs,ders){
   ES_COSTURA=esCostura;
   FOTOS_MED=fMed.map(u=>driveImgFull(u));
   FOTOS_PRO=fPro.map(u=>driveImgFull(u));
+  // Mostrar botones según fotos disponibles
+  document.getElementById('btnMed').style.display = FOTOS_MED.length ? '' : 'none';
+  document.getElementById('btnProc').style.display = (esCostura && FOTOS_PRO.length) ? '' : 'none';
 
   function fil(k,v){return `<div class="f"><div class="k">${k}</div><div class="v">${esc(v)||'—'}</div></div>`;}
 
@@ -257,13 +262,17 @@ document.addEventListener('wheel',function(e){
 document.addEventListener('dblclick',function(e){ if(e.target.id==='lbImg'){ lbScale=lbScale>1?1:2.5; aplicarZoom(); } });
 
 /* ===== OPCIÓN B: ver/imprimir fotos de medidas por separado ===== */
-function verFotos(){
+function verFotos(tipo){
   const todas=[];
-  if(ES_COSTURA) FOTOS_PRO.forEach(s=>todas.push({src:s,tag:'MEDIDAS DE PROCESO (COSTURA)'}));
-  FOTOS_MED.forEach(s=>todas.push({src:s,tag:'HOJAS DE MEDIDAS'}));
-  if(!todas.length){ alert('Esta auditoría no tiene fotos de medidas.'); return; }
+  if(tipo==='proc'){
+    FOTOS_PRO.forEach(s=>todas.push({src:s,tag:'MEDIDAS DE PROCESO (COSTURA)'}));
+  } else {
+    FOTOS_MED.forEach(s=>todas.push({src:s,tag:'HOJAS DE MEDIDAS'}));
+  }
+  if(!todas.length){ alert('Esta auditoría no tiene fotos de ese tipo.'); return; }
 
-  const titulo='Fotos de medidas · '+ID;
+  const nombreTipo = (tipo==='proc') ? 'Medidas de proceso' : 'Hojas de medidas';
+  const titulo=nombreTipo+' · '+ID;
   let cuerpo='';
   todas.forEach((f,i)=>{
     cuerpo+=`<figure class="hoja" data-deg="0">
