@@ -44,10 +44,11 @@ tr:hover td{background:#f6f9fb}
 <div class="wrap">
   <div class="card">
     <div class="filtros">
-      <div><label>PO</label><input id="fPo" placeholder="6002469"></div>
+      <div><label>Proceso</label><select id="fProceso"><option value="">Todos</option><option>Costura (taller)</option><option>Acabados (taller)</option><option>Acabados Final (interno)</option></select></div>
       <div><label>Grupo</label><input id="fGrupo" placeholder="EFI-102"></div>
       <div><label>Estilo LIVES</label><input id="fEstilo" placeholder="24647"></div>
       <div><label>Color</label><input id="fColor" placeholder="White"></div>
+      <div><label>PO</label><input id="fPo" placeholder="6002469"></div>
       <div><label>Cliente</label><select id="fCliente"><option value="">Todos</option></select></div>
       <div><label>Auditor</label><select id="fAuditor"><option value="">Todos</option></select></div>
       <div><label>Resultado</label><select id="fResultado"><option value="">Todos</option><option value="aprob">Aprobado</option><option value="rech">Rechazado</option><option value="override">Override</option></select></div>
@@ -121,9 +122,10 @@ function badge(res){
   return res||'—';
 }
 function buscar(){
-  const po=norm(val('fPo')),gr=norm(val('fGrupo')),es=norm(val('fEstilo')),co=norm(val('fColor')),
+  const proc=val('fProceso'),po=norm(val('fPo')),gr=norm(val('fGrupo')),es=norm(val('fEstilo')),co=norm(val('fColor')),
         cli=val('fCliente'),aud=val('fAuditor'),resu=norm(val('fResultado')),desde=val('fDesde'),hasta=val('fHasta');
   let res=DATA.filter(r=>{
+    if(proc&&r[C.proceso]!==proc) return false;
     if(po&&norm(r[C.po]).indexOf(po)<0) return false;
     if(gr&&norm(r[C.grupo]).indexOf(gr)<0) return false;
     if(es&&norm(r[C.estiloL]).indexOf(es)<0) return false;
@@ -161,7 +163,7 @@ function val(id){return document.getElementById(id).value.trim();}
 document.getElementById('btnBuscar').onclick=buscar;
 document.getElementById('btnLimpiar').onclick=()=>{
   ['fPo','fGrupo','fEstilo','fColor','fDesde','fHasta'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('fCliente').value=''; document.getElementById('fAuditor').value=''; document.getElementById('fResultado').value='';
+  document.getElementById('fProceso').value=''; document.getElementById('fCliente').value=''; document.getElementById('fAuditor').value=''; document.getElementById('fResultado').value='';
   buscar();
 };
 // Enter en cualquier input dispara búsqueda
