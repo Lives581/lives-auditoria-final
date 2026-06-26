@@ -126,7 +126,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
         <div class="hint" id="cliHint">Escribe el grupo y el cliente aparece solo.</div></div>
       <div><label>Estilo LIVES</label><input id="estiloL" list="dlEstilo" autocomplete="off" placeholder="24647">
         <datalist id="dlEstilo"></datalist></div>
-      <div><label>PO *</label><input id="po" list="dlPo" autocomplete="off" inputmode="numeric" placeholder="6002469">
+      <div><label>PO *</label><input id="po" list="dlPo" autocomplete="off" placeholder="6002469 o con letras">
         <datalist id="dlPo"></datalist></div>
       <div><label>Color</label><input id="color" list="dlColor" autocomplete="off" placeholder="White">
         <datalist id="dlColor"></datalist></div>
@@ -136,9 +136,8 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
         <datalist id="dlDest"></datalist></div>
       <div><label>Cant. pedido *</label><input id="pedido" inputmode="numeric" placeholder="500">
         <div class="hint" id="pedHint"></div></div>
-      <div><label>Total recibido *</label><input id="recibido" inputmode="numeric" placeholder="503"></div>
-      <div class="full"><label>Lote real (inicial) *</label><input id="loteReal" inputmode="numeric" placeholder="≥ recibido">
-        <div class="hint" id="loteHint">El tamaño real del lote. En el reporte se cuenta una sola vez por proceso, aunque se reaudite.</div></div>
+      <div><label>Total recibido (lote) *</label><input id="recibido" inputmode="numeric" placeholder="503">
+        <div class="hint">El lote que llegó para auditar.</div></div>
       <div class="full"><label>Auditor *</label><input id="auditor" list="auditoras" autocomplete="off" placeholder="Escribe y selecciona tu nombre">
         <datalist id="auditoras"></datalist></div>
       <div class="full"><label>Fecha *</label><input id="fecha" type="date"></div>
@@ -550,10 +549,6 @@ function recalc(){
   else if(lic){v.classList.add('ap');vt.textContent='APROBADO (LICENCIA)';ov.classList.remove('show');resetOv();}
   else if(acceptNum!=null&&tot<=acceptNum){v.classList.add('ap');vt.textContent='APROBADO';ov.classList.remove('show');resetOv();}
   else{if(S.override){v.classList.add('ov');vt.textContent='APROBADO (OVERRIDE)';}else{v.classList.add('re');vt.textContent='RECHAZADO';}ov.classList.add('show');}
-  // lote real >= recibido
-  const lr=parseInt($('loteReal').value)||0;
-  $('loteHint').className='hint'+((lr&&lote&&lr<lote)?' warn':'');
-  $('loteHint').textContent=(lr&&lote&&lr<lote)?'El lote real no puede ser menor que el total recibido.':'El tamaño real del lote. En el reporte se cuenta una sola vez por proceso, aunque se reaudite.';
   validate();
 }
 function resetOv(){S.override=false;$('ovSwitch').checked=false;$('ovFields').classList.remove('show');}
@@ -629,7 +624,34 @@ function buildChips(){
 }
 
 /* ===== foto ===== */
-function shrink(file,cb){const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const max=1000,sc=Math.min(1,max/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=img.width*sc;cv.height=img.height*sc;cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);cb(cv.toDataURL('image/jpeg',0.7));};img.src=r.result;};r.readAsDataURL(file);}
+function shrink(file,cb){
+  const r=new FileReader();
+  r.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1400,sc=Math.min(1,max/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=img.width*sc; cv.height=img.height*sc;
+      const ctx=cv.getContext('2d');
+      ctx.drawImage(img,0,0,cv.width,cv.height);
+      // ===== filtro tipo escáner: gris + contraste + brillo =====
+      try{
+        const d=ctx.getImageData(0,0,cv.width,cv.height), px=d.data;
+        const contraste=1.35, brillo=12;
+        for(let i=0;i<px.length;i+=4){
+          let g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];   // a gris
+          g=(g-128)*contraste+128+brillo;                  // contraste + brillo
+          g=g<0?0:g>255?255:g;
+          px[i]=px[i+1]=px[i+2]=g;
+        }
+        ctx.putImageData(d,0,0);
+      }catch(e){/* si falla el filtro, queda la foto normal */}
+      cb(cv.toDataURL('image/jpeg',0.75));
+    };
+    img.src=r.result;
+  };
+  r.readAsDataURL(file);
+}
 
 /* ===== override ===== */
 $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').classList.toggle('show',S.override);recalc();};
@@ -638,13 +660,13 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 /* ===== validación ===== */
 function v(id){return ($(id).value||'').trim();}
 function validate(){
-  const lote=parseInt(v('recibido'))||0, lr=parseInt(v('loteReal'))||0;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&S.proceso&&S.nAud&&lr&&lr>=lote && S.fotosMed.length>0 && (!requiereProceso()||S.fotosPro.length>0);
+  const lote=parseInt(v('recibido'))||0;
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&S.proceso&&S.nAud && S.fotosMed.length>0 && (!requiereProceso()||S.fotosPro.length>0);
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
 }
-['po','recibido','loteReal','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
+['po','recibido','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('grupo').addEventListener('input',aplicarCliente);
 $('medDef').addEventListener('input',maskMedidas);
 ['grupo','estiloL','estiloC','color','po','destino'].forEach(id=>$(id).addEventListener('input',()=>{ refrescarCascada(); pedirOrdinal(); }));
@@ -699,7 +721,7 @@ function armarPayload(){
     cliente_cod:cod,cliente:nom,fecha:v('fecha'),n_auditoria:S.nAud,proceso:S.proceso,int_ext:S.int_ext,reproceso:S.reproceso?'SÍ':'NO',
     servicio:interno?'Acabados Final':v('taller'),grupo:v('grupo'),estilo_lives:v('estiloL'),estilo_cliente:v('estiloC'),
     po:v('po'),color:v('color'),destino:v('destino'),cant_pedido:parseInt(v('pedido'))||'',total_recibido:recibido,
-    lote_real:parseInt(v('loteReal'))||recibido,licencia:S.licencia?'SÍ':'NO',nivel_aql:parseFloat(S.nivel),
+    lote_real:recibido,licencia:S.licencia?'SÍ':'NO',nivel_aql:parseFloat(S.nivel),
     override:S.override?'SÍ':'NO',override_autoriza:v('ovWho'),override_motivo:v('ovWhy'),
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
     auditor:v('auditor'),
@@ -735,6 +757,16 @@ $('save').onclick=async()=>{
 // reintento automático suave al recuperar conexión (no envía solo, solo avisa)
 window.addEventListener('online', refrescarPend);
 window.addEventListener('offline', ()=>{ const b=$('pendBar'); });
+
+/* ===== mayúsculas automáticas (excepto proceso) ===== */
+function upperOf(id){
+  const el=$(id); if(!el) return;
+  el.addEventListener('input',()=>{
+    const p=el.selectionStart; el.value=el.value.toUpperCase();
+    try{el.setSelectionRange(p,p);}catch(e){}
+  });
+}
+['grupo','estiloL','estiloC','po','color','destino','auditor','comentario','ovWho','ovWhy','medRes'].forEach(upperOf);
 
 /* init */
 $('fecha').valueAsDate=new Date();
