@@ -114,11 +114,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
       <div class="full"><label>Cliente (automático)</label>
         <input id="cliente" readonly placeholder="Se completa según el grupo" style="background:#eef3f1;font-weight:600;color:var(--green)">
         <div class="hint" id="cliHint">Escribe el grupo y el cliente aparece solo.</div></div>
-      <div><label>Estilo LIVES</label><input id="estiloL" placeholder="24647"></div>
-      <div><label>Estilo cliente</label><input id="estiloC" placeholder="QRKRS-T6539M"></div>
-      <div><label>PO *</label><input id="po" inputmode="numeric" placeholder="6002469"></div>
-      <div><label>Color</label><input id="color" placeholder="White"></div>
-      <div><label>Destino</label><input id="destino" placeholder="USA (SEA)"></div>
+      <div><label>Estilo LIVES</label><input id="estiloL" list="dlEstilo" autocomplete="off" placeholder="24647">
+        <datalist id="dlEstilo"></datalist></div>
+      <div><label>PO *</label><input id="po" list="dlPo" autocomplete="off" inputmode="numeric" placeholder="6002469">
+        <datalist id="dlPo"></datalist></div>
+      <div><label>Color</label><input id="color" list="dlColor" autocomplete="off" placeholder="White">
+        <datalist id="dlColor"></datalist></div>
+      <div><label>Estilo cliente</label><input id="estiloC" list="dlEstC" autocomplete="off" placeholder="QRKRS-T6539M">
+        <datalist id="dlEstC"></datalist></div>
+      <div><label>Destino</label><input id="destino" list="dlDest" autocomplete="off" placeholder="USA (SEA)">
+        <datalist id="dlDest"></datalist></div>
       <div><label>Cant. pedido *</label><input id="pedido" inputmode="numeric" placeholder="500">
         <div class="hint" id="pedHint"></div></div>
       <div><label>Total recibido *</label><input id="recibido" inputmode="numeric" placeholder="503"></div>
@@ -127,6 +132,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
       <div class="full"><label>Auditor *</label><input id="auditor" list="auditoras" autocomplete="off" placeholder="Escribe y selecciona tu nombre">
         <datalist id="auditoras"></datalist></div>
       <div class="full"><label>Fecha *</label><input id="fecha" type="date"></div>
+    </div>
+    <div id="panelPrev" style="display:none;margin-top:12px;padding:12px;border-radius:12px;background:#eef3f8;border:1px solid #d4e0ee">
+      <div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:6px">📋 Auditorías previas de este lote</div>
+      <div id="panelPrevBody" style="font-size:13px;line-height:1.7;color:#334"></div>
     </div>
   </div>
 
@@ -274,9 +283,81 @@ async function calcOrdinal(){
   out.value=S.nAud;
   h.className='hint'; h.textContent=previas? (previas+' auditoría(s) previa(s) de este tipo en el lote') : 'Primera auditoría de este tipo en el lote';
   aplicarPedido();
+  mostrarPanelPrevias();
   validate();
 }
 function pedirOrdinal(){ clearTimeout(ordTimer); ordTimer=setTimeout(calcOrdinal,400); }
+
+/* ===== CASCADA: Grupo→Estilo→PO→Color→EstiloCliente→Destino (fuente: AUDITORÍAS) =====
+   Índices en AUDITORÍAS: H=7 grupo, I=8 estLives, K=10 po, L=11 color, J=9 estCli, M=12 destino */
+const LOTE_IDX={grupo:7,estiloL:8,po:10,color:11,estiloC:9,destino:12};
+function filasValidas(){
+  return (AUD_CACHE||[]).filter(r=>r&&r[0]!=null&&norm(r[0])!=='ID_AUDITORIA'&&norm(r[0])!=='');
+}
+// valores únicos de un campo, filtrando por los niveles superiores ya elegidos
+function opcionesDe(campo, filtros){
+  const idx=LOTE_IDX[campo];
+  const set=new Set();
+  filasValidas().forEach(r=>{
+    let ok=true;
+    for(const k in filtros){
+      if(filtros[k] && norm(r[LOTE_IDX[k]])!==norm(filtros[k])){ ok=false; break; }
+    }
+    if(ok){ const v=String(r[idx]||'').trim(); if(v) set.add(v); }
+  });
+  return [...set].sort();
+}
+function setDatalist(dlId, valores){
+  const dl=document.getElementById(dlId); if(!dl) return;
+  dl.innerHTML=''; valores.forEach(v=>{const o=document.createElement('option');o.value=v;dl.appendChild(o);});
+}
+function refrescarCascada(){
+  const g=$('grupo').value, e=$('estiloL').value, p=$('po').value, c=$('color').value, ec=$('estiloC').value;
+  // Grupos (siempre todos)
+  setDatalist('grupos', opcionesDe('grupo',{}));
+  // Estilo según grupo
+  setDatalist('dlEstilo', opcionesDe('estiloL',{grupo:g}));
+  // PO según grupo+estilo
+  setDatalist('dlPo', opcionesDe('po',{grupo:g,estiloL:e}));
+  // Color según grupo+estilo+po
+  setDatalist('dlColor', opcionesDe('color',{grupo:g,estiloL:e,po:p}));
+  // Estilo cliente según grupo+estilo+po+color
+  setDatalist('dlEstC', opcionesDe('estiloC',{grupo:g,estiloL:e,po:p,color:c}));
+  // Destino según todo lo anterior
+  setDatalist('dlDest', opcionesDe('destino',{grupo:g,estiloL:e,po:p,color:c,estiloC:ec}));
+}
+// Cuando una PO existe y es única, autocompletar lo que falte hacia abajo
+function autocompletarPorPO(){
+  const g=$('grupo').value, e=$('estiloL').value, p=$('po').value;
+  if(!p) return;
+  const cand=filasValidas().filter(r=>norm(r[LOTE_IDX.po])===norm(p)
+     && (!g||norm(r[LOTE_IDX.grupo])===norm(g))
+     && (!e||norm(r[LOTE_IDX.estiloL])===norm(e)));
+  if(!cand.length) return;
+  const r=cand[0];
+  if(!g) $('grupo').value=r[LOTE_IDX.grupo];
+  if(!e) $('estiloL').value=r[LOTE_IDX.estiloL];
+  if(!$('color').value)  $('color').value =r[LOTE_IDX.color];
+  if(!$('estiloC').value)$('estiloC').value=r[LOTE_IDX.estiloC];
+  if(!$('destino').value)$('destino').value=r[LOTE_IDX.destino];
+  aplicarCliente();
+}
+
+/* ===== Panel "quién auditó antes" ===== */
+function mostrarPanelPrevias(){
+  const panel=$('panelPrev'), body=$('panelPrevBody');
+  if(!loteCompleto()){ panel.style.display='none'; return; }
+  const key=llaveActual();
+  const previas=filasValidas().filter(r=>llaveFila(r)===key);
+  if(!previas.length){ panel.style.display='none'; return; }
+  // Cada fila: AF=31 auditor, D=3 proceso, B=1 fecha, AB=27 resultado_final
+  const items=previas.map(r=>{
+    const aud=r[31]||'—', proc=r[3]||'—', fec=(r[1]||'').substring(0,10), res=r[27]||'—';
+    return `<div>• <b>${aud}</b> · ${proc} · ${fec} · <span style="font-weight:600">${res}</span></div>`;
+  }).join('');
+  body.innerHTML=items;
+  panel.style.display='block';
+}
 
 /* ===== máscara Def. medidas: N/M (1 dígito por lado) ===== */
 function maskMedidas(e){
@@ -496,7 +577,11 @@ function validate(){
 ['po','recibido','loteReal','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('grupo').addEventListener('input',aplicarCliente);
 $('medDef').addEventListener('input',maskMedidas);
-['grupo','estiloL','estiloC','color','po'].forEach(id=>$(id).addEventListener('input',pedirOrdinal));
+['grupo','estiloL','estiloC','color','po','destino'].forEach(id=>$(id).addEventListener('input',()=>{ refrescarCascada(); pedirOrdinal(); }));
+// al elegir/escribir PO, intentar autocompletar el resto del lote
+$('po').addEventListener('change',()=>{ autocompletarPorPO(); refrescarCascada(); pedirOrdinal(); });
+$('estiloL').addEventListener('change',()=>{ refrescarCascada(); });
+$('color').addEventListener('change',()=>{ refrescarCascada(); });
 
 /* ===== guardar ===== */
 function toast(m,t){const e=$('toast');e.textContent=m;e.className='toast show '+(t||'');setTimeout(()=>e.className='toast',2800);}
@@ -526,7 +611,7 @@ $('save').onclick=async()=>{
 
 /* init */
 $('fecha').valueAsDate=new Date();
-loadLists(); cargarAud(); recalc();
+loadLists(); cargarAud().then(refrescarCascada); recalc();
 </script>
 </body>
 </html>
