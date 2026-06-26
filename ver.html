@@ -286,14 +286,18 @@ function verFotos(){
   figure img{display:block;max-width:100%;height:auto;border-radius:6px}
   .tip{color:#dfe4ea;font-size:13px;text-align:center;max-width:560px;margin:0 auto 6px}
   @media print{
-    @page{ size: landscape; margin:6mm; }
+    @page{ size: portrait; margin:0; }
     body{background:#fff}
     .bar,.tip{display:none}
     .wrap{padding:0;gap:0}
-    figure{break-inside:avoid;page-break-inside:avoid;box-shadow:none;border-radius:0;padding:0;max-width:none;width:100%}
+    /* cada foto llena una hoja; la imagen se ROTA 90° para aprovechar todo (girar el papel para leer) */
+    figure{break-inside:avoid;page-break-inside:avoid;box-shadow:none;border-radius:0;padding:0;margin:0;
+      width:210mm;height:297mm;display:flex;align-items:center;justify-content:center;overflow:hidden}
     figure + figure{break-before:page;page-break-before:always}
-    figure .lab{padding:4mm 0 2mm}
-    figure img{max-height:185mm;margin:0 auto;object-fit:contain}
+    figure .lab{display:none}
+    /* al rotar 90°: el ancho de la imagen ocupa el ALTO de la hoja (297mm) y viceversa */
+    figure img{transform:rotate(90deg) translateZ(0);transform-origin:center;
+      width:270mm;height:auto;max-height:200mm;object-fit:contain;border-radius:0}
   }
 </style></head><body>
 <div class="bar"><h1>${titulo}</h1><button onclick="window.print()">🖨 Imprimir / Guardar PDF</button></div>
