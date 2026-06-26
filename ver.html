@@ -37,6 +37,7 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
 .fotos{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px}
 .fotos figure{margin:0}
 .fotos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:zoom-in;background:#f3f5f8}
+.fotos img.rot{transform:rotate(90deg)}
 .fotoblock{margin-top:14px}
 .fotoblock .lab{font-weight:700;font-size:12px;color:var(--navy);background:#eef2f7;padding:5px 10px;border-radius:6px;display:inline-block;margin-bottom:6px}
 /* lightbox */
@@ -44,6 +45,7 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
 #lb.show{display:flex}
 #lb .lbScroll{max-width:96vw;max-height:88vh;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pinch-zoom;border-radius:6px}
 #lb img{max-width:96vw;max-height:88vh;object-fit:contain;border-radius:6px;transition:transform .15s;transform-origin:center;cursor:zoom-in;display:block}
+#lb img.rotL{transform:rotate(90deg);max-width:88vh;max-height:96vw}
 #lb img.zoom{max-width:none;max-height:none;cursor:zoom-out}
 #lb .close{position:absolute;top:16px;right:20px;background:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:22px;cursor:pointer;font-weight:700}
 #lb .hint{color:#cdd; margin-top:12px;font-size:13px}
@@ -55,16 +57,13 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
   body{background:#fff}
   .page{box-shadow:none;margin:0;max-width:none;padding:0}
   h2{break-after:avoid}
-  /* cada foto en su propia hoja, grande, SIN páginas en blanco */
+  /* fotos grandes, sin saltos forzados (evita páginas en blanco) */
   .fotos{display:block}
-  .fotos figure{break-inside:avoid;page-break-inside:avoid;text-align:center;margin:0}
-  /* salto SOLO entre fotos (no antes de la primera) */
-  .fotos figure + figure{break-before:page;page-break-before:always}
-  .fotos img{width:100%;height:auto;max-height:96vh;aspect-ratio:auto;object-fit:contain;border:none}
-  .fotoblock{break-inside:avoid}
-  .fotoblock .lab{break-after:avoid;break-inside:avoid}
-  /* el footer no fuerza página nueva */
-  .foot{break-before:avoid}
+  .fotos figure{break-inside:avoid;page-break-inside:avoid;text-align:center;margin:0 0 6mm}
+  .fotos img{width:100%;height:auto;max-height:165mm;object-fit:contain;border:1px solid #ccc}
+  .fotos img.rot{transform:rotate(90deg);max-width:165mm}
+  .fotoblock{break-inside:auto}
+  .fotoblock .lab{break-after:avoid}
 }
 </style>
 </head>
@@ -219,12 +218,12 @@ function render(r,defs,ders){
   html+=`<h2>Fotos</h2>`;
   if(esCostura && fPro.length){
     html+=`<div class="fotoblock"><span class="lab">MEDIDAS DE PROCESO (COSTURA)</span><div class="fotos">`;
-    fPro.forEach(u=>{ const s=driveImg(u); html+=`<figure><img src="${s}" alt="proceso" loading="lazy" onclick="abrirLb(this.src)"></figure>`; });
+    fPro.forEach(u=>{ const s=driveImg(u); html+=`<figure><img src="${s}" alt="proceso" loading="lazy" onload="orientar(this)" onclick="abrirLb(this.src)"></figure>`; });
     html+=`</div></div>`;
   }
   if(fMed.length){
     html+=`<div class="fotoblock"><span class="lab">HOJAS DE MEDIDAS</span><div class="fotos">`;
-    fMed.forEach(u=>{ const s=driveImg(u); html+=`<figure><img src="${s}" alt="medidas" loading="lazy" onclick="abrirLb(this.src)"></figure>`; });
+    fMed.forEach(u=>{ const s=driveImg(u); html+=`<figure><img src="${s}" alt="medidas" loading="lazy" onload="orientar(this)" onclick="abrirLb(this.src)"></figure>`; });
     html+=`</div></div>`;
   }
   if(!fMed.length && !(esCostura&&fPro.length)){
@@ -236,9 +235,21 @@ function render(r,defs,ders){
   document.getElementById('page').innerHTML=html;
 }
 
-let lbScale=1;
-function aplicarZoom(){ const im=document.getElementById('lbImg'); im.style.transform='scale('+lbScale+')'; im.classList.toggle('zoom',lbScale>1); }
-function abrirLb(src){ const lb=document.getElementById('lb'); lbScale=1; const im=document.getElementById('lbImg'); im.src=src; im.style.transform='scale(1)'; im.classList.remove('zoom'); lb.classList.add('show'); }
+// Si la imagen llega vertical (más alta que ancha), rotarla 90° para verla horizontal
+function orientar(img){ if(img.naturalHeight>img.naturalWidth){ img.classList.add('rot'); } }
+let lbScale=1, lbRot=false;
+function aplicarZoom(){ const im=document.getElementById('lbImg'); const base=lbRot?'rotate(90deg) ':''; im.style.transform=base+'scale('+lbScale+')'; im.classList.toggle('zoom',lbScale>1); }
+function abrirLb(src){
+  const lb=document.getElementById('lb'); lbScale=1; lbRot=false;
+  const im=document.getElementById('lbImg');
+  im.className=''; im.style.transform='';
+  im.onload=function(){
+    lbRot = (im.naturalHeight>im.naturalWidth);   // vertical -> rotar a horizontal
+    if(lbRot) im.classList.add('rotL');
+    aplicarZoom();
+  };
+  im.src=src; lb.classList.add('show');
+}
 function cerrarLb(e,force){ if(force||e.target.id==='lb'){ document.getElementById('lb').classList.remove('show'); } }
 // rueda del mouse para zoom
 document.addEventListener('wheel',function(e){
