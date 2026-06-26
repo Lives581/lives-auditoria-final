@@ -51,17 +51,21 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
 .estado{padding:40px;text-align:center;color:#889}
 .foot{margin-top:24px;border-top:1px solid var(--line);padding-top:10px;font-size:11px;color:#99a;display:flex;justify-content:space-between}
 @media print{
-  @page{ margin:8mm; }
+  /* TODO el reporte en HORIZONTAL (apaisado) */
+  @page{ size: landscape; margin:10mm; }
   .toolbar{display:none}
   #lb{display:none!important}
   body{background:#fff}
   .page{box-shadow:none;margin:0;max-width:none;padding:0}
-  h2{break-after:avoid}
-  /* Cada foto ocupa una hoja completa, grande. Salto SOLO entre fotos (no antes de la 1ra) */
+  h2{break-after:avoid;margin:14px 0 8px}
+  /* datos aprovechan el ancho */
+  .grid{grid-template-columns:repeat(4,1fr)}
+  .aqlbox{grid-template-columns:repeat(4,1fr)}
+  /* cada foto en su propia hoja apaisada, grande, sin hojas vacías */
   .fotos{display:block}
   .fotos figure{break-inside:avoid;page-break-inside:avoid;text-align:center;margin:0}
   .fotos figure + figure{break-before:page;page-break-before:always}
-  .fotos img{width:100%;height:auto;max-height:265mm;aspect-ratio:auto;object-fit:contain;border:none}
+  .fotos img{display:block;width:auto;height:auto;max-width:100%;max-height:175mm;margin:0 auto;object-fit:contain;border:none}
   .fotoblock{break-inside:avoid}
   .fotoblock .lab{break-after:avoid;break-inside:avoid}
   .foot{break-before:avoid}
