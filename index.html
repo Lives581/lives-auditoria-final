@@ -70,6 +70,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
 .toast.show{opacity:1}.toast.ok{background:var(--green)}.toast.err{background:var(--red)}
 .hint{font-size:11px;color:var(--muted);margin-top:4px}
 .hint.warn{color:var(--red);font-weight:600}
+.fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.fotoItem{position:relative;border-radius:10px;overflow:hidden;border:1px solid #e3e8ee;aspect-ratio:1}
+.fotoItem img{width:100%;height:100%;object-fit:cover;display:block}
+.fotoItem .del{position:absolute;top:3px;right:3px;background:rgba(230,57,70,.92);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;font-weight:700}
+textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;font:inherit;background:#fbfcfd;box-sizing:border-box;resize:vertical}
 </style>
 </head>
 <body>
@@ -204,6 +209,32 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
       <div class="field"><label>Motivo *</label><textarea id="ovWhy" rows="2" placeholder="Ej. Dio pase al rechazo"></textarea></div>
     </div>
   </div>
+
+  <!-- FOTOS DE MEDIDAS -->
+  <div class="card">
+    <div class="sec"><span class="dot"></span>Fotos de hojas de medidas *</div>
+    <div class="hint" style="margin:-6px 0 10px">Obligatorio. Toma foto a las hojas de medidas (puedes varias).</div>
+    <div class="fotos" id="fotosMed"></div>
+    <label class="btn" style="display:inline-block;margin-top:6px">📷 Tomar / agregar foto
+      <input type="file" accept="image/*" capture="environment" id="inMed" multiple hidden></label>
+    <div class="hint" id="medCount">0 fotos · máximo 10</div>
+  </div>
+
+  <!-- FOTOS DE MEDIDAS DE PROCESO (solo Costura taller) -->
+  <div class="card" id="cardProceso" style="display:none">
+    <div class="sec"><span class="dot"></span>Fotos de medidas de proceso *</div>
+    <div class="hint" style="margin:-6px 0 10px">Solo para Costura (taller). Obligatorio en ese proceso.</div>
+    <div class="fotos" id="fotosPro"></div>
+    <label class="btn" style="display:inline-block;margin-top:6px">📷 Tomar / agregar foto
+      <input type="file" accept="image/*" capture="environment" id="inPro" multiple hidden></label>
+    <div class="hint" id="proCount">0 fotos · máximo 10</div>
+  </div>
+
+  <!-- COMENTARIO -->
+  <div class="card">
+    <div class="sec"><span class="dot"></span>Comentario final</div>
+    <textarea id="comentario" rows="3" placeholder="Observaciones generales de la auditoría (opcional)"></textarea>
+  </div>
 </div>
 
 <div class="bar"><div class="inner">
@@ -287,6 +318,38 @@ async function calcOrdinal(){
   validate();
 }
 function pedirOrdinal(){ clearTimeout(ordTimer); ordTimer=setTimeout(calcOrdinal,400); }
+
+/* ===== FOTOS DE MEDIDAS ===== */
+const MAX_FOTOS=10;
+function pintarFotos(cual){
+  const arr=cual==='med'?S.fotosMed:S.fotosPro;
+  const cont=document.getElementById(cual==='med'?'fotosMed':'fotosPro');
+  const cnt=document.getElementById(cual==='med'?'medCount':'proCount');
+  cont.innerHTML='';
+  arr.forEach((b64,i)=>{
+    const d=document.createElement('div');d.className='fotoItem';
+    d.innerHTML=`<img src="${b64}"><button class="del" data-i="${i}">×</button>`;
+    d.querySelector('.del').onclick=()=>{arr.splice(i,1);pintarFotos(cual);validate();};
+    cont.appendChild(d);
+  });
+  cnt.textContent=arr.length+' foto(s) · máximo '+MAX_FOTOS;
+}
+function agregarFotos(files,cual){
+  const arr=cual==='med'?S.fotosMed:S.fotosPro;
+  const lista=[...files];
+  let pend=lista.length;
+  lista.forEach(f=>{
+    if(arr.length>=MAX_FOTOS){pend--; if(pend<=0){pintarFotos(cual);validate();} return;}
+    shrink(f,b64=>{ if(arr.length<MAX_FOTOS) arr.push(b64); pend--; if(pend<=0){pintarFotos(cual);validate();} });
+  });
+}
+// ¿el proceso actual requiere foto de proceso? (solo Costura taller)
+function requiereProceso(){ return /costura/i.test(S.proceso||''); }
+function actualizarCardProceso(){
+  const card=document.getElementById('cardProceso');
+  if(requiereProceso()){ card.style.display='block'; }
+  else { card.style.display='none'; S.fotosPro=[]; pintarFotos('pro'); }
+}
 
 /* ===== CASCADA: Grupo→Estilo→PO→Color→EstiloCliente→Destino (fuente: AUDITORÍAS) =====
    Índices en AUDITORÍAS: H=7 grupo, I=8 estLives, K=10 po, L=11 color, J=9 estCli, M=12 destino */
@@ -434,7 +497,7 @@ function fillTaller(proc){
 }
 
 /* ===== ESTADO ===== */
-const S={nAud:'',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false,reproceso:false};
+const S={nAud:'',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false,reproceso:false,fotosMed:[],fotosPro:[]};
 let AUD_CACHE=null;       // filas de la hoja AUDITORÍAS (para ordinal/pedido/panel)
 let ordTimer=null;
 let defId=0;
@@ -452,12 +515,16 @@ $('proceso').onchange=()=>{
   S.int_ext=S.proceso?(interno?'INTERNA':'EXTERNA'):'';
   $('tallerWrap').style.display=(S.proceso&&!interno)?'block':'none';
   fillTaller(S.proceso);
+  actualizarCardProceso();
   pedirOrdinal(); validate();
 };
 $('taller').onchange=validate;
 
 /* ===== reproceso ===== */
 $('reproSwitch').onchange=()=>{S.reproceso=$('reproSwitch').checked;recalc();};
+
+$('inMed').onchange=e=>{agregarFotos(e.target.files,'med');e.target.value='';};
+$('inPro').onchange=e=>{agregarFotos(e.target.files,'pro');e.target.value='';};
 
 /* ===== licencia ===== */
 $('licSwitch').onchange=()=>{S.licencia=$('licSwitch').checked;
@@ -496,7 +563,7 @@ function catOptsModo(modo,sel){
 function addDef(preCod){
   const pre=preCod?CAT.find(c=>c[0]===preCod):null;
   const id=++defId;
-  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',cant:1,detalle:'',foto:''};
+  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',cant:1,detalle:''};
   S.defs.push(d);
   const el=document.createElement('div');el.className='def';
   el.innerHTML=`<button class="rm">×</button>
@@ -505,8 +572,7 @@ function addDef(preCod){
       <div><label>Cantidad</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
       <div class="full"><label>Categoría</label><select class="dCat">${catOptsModo('def',d.categoria)}</select></div>
       <div class="full"><label>Detalle / nota</label><input class="dDet" placeholder="Ej. hilo contaminado negro"></div>
-    </div>
-    <div class="photo"><label class="btn">📷 Foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label><img class="dPrev" style="display:none"><span class="hint dFn">Sin foto</span></div>`;
+    </div>`;
   $('defs').appendChild(el);
   const q=s=>el.querySelector(s);
   if(d.categoria) q('.dCat').value=d.categoria;
@@ -517,7 +583,6 @@ function addDef(preCod){
   q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
   q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
   q('.dCant').oninput=e=>{d.cant=parseInt(e.target.value)||0;recalc();};
-  q('.dFoto').onchange=e=>{const f=e.target.files[0];if(!f)return;shrink(f,b64=>{d.foto=b64;const im=q('.dPrev');im.src=b64;im.style.display='block';q('.dFn').textContent='Foto lista';});};
   recalc();
 }
 $('add').onclick=()=>addDef();
@@ -569,7 +634,7 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 function v(id){return ($(id).value||'').trim();}
 function validate(){
   const lote=parseInt(v('recibido'))||0, lr=parseInt(v('loteReal'))||0;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&S.proceso&&S.nAud&&lr&&lr>=lote;
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&S.proceso&&S.nAud&&lr&&lr>=lote && S.fotosMed.length>0 && (!requiereProceso()||S.fotosPro.length>0);
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
@@ -598,8 +663,11 @@ $('save').onclick=async()=>{
     override:S.override?'SÍ':'NO',override_autoriza:v('ovWho'),override_motivo:v('ovWhy'),
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
     auditor:v('auditor'),
-    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto})),
-    derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle}))
+    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle})),
+    derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle})),
+    fotos_medidas:S.fotosMed,
+    fotos_proceso:S.fotosPro,
+    comentario:v('comentario')
   };
   try{
     const res=await fetch(APP_URL,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}});
