@@ -266,9 +266,10 @@ function verFotos(){
   const titulo='Fotos de medidas · '+ID;
   let cuerpo='';
   todas.forEach((f,i)=>{
-    cuerpo+=`<figure class="hoja">
-      <div class="lab">${f.tag}${todas.length>1?(' · '+(i+1)+'/'+todas.length):''}</div>
-      <img src="${f.src}" alt="medida">
+    cuerpo+=`<figure class="hoja" data-deg="0">
+      <div class="lab">${f.tag}${todas.length>1?(' · '+(i+1)+'/'+todas.length):''}
+        <button class="girar" onclick="girarFoto(this)">⟳ Girar esta foto</button></div>
+      <div class="imgbox"><img src="${f.src}" alt="medida"></div>
     </figure>`;
   });
 
@@ -277,34 +278,52 @@ function verFotos(){
 <title>${titulo}</title>
 <style>
   body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:#3a3f47;color:#fff}
-  .bar{position:sticky;top:0;background:#1f3864;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .bar{position:sticky;top:0;background:#1f3864;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;z-index:5}
   .bar h1{font-size:15px;margin:0;font-weight:700}
   .bar button{background:#e9c46a;color:#1f3864;border:none;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px}
   .wrap{padding:18px;display:flex;flex-direction:column;align-items:center;gap:18px}
   figure{margin:0;background:#fff;border-radius:10px;padding:14px;max-width:96vw;box-shadow:0 2px 10px rgba(0,0,0,.3)}
-  figure .lab{color:#1f3864;font-weight:700;font-size:13px;margin-bottom:8px}
-  figure img{display:block;max-width:100%;height:auto;border-radius:6px}
-  .tip{color:#dfe4ea;font-size:13px;text-align:center;max-width:560px;margin:0 auto 6px}
+  figure .lab{color:#1f3864;font-weight:700;font-size:13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  figure .lab .girar{background:#2a9d8f;color:#fff;border:none;border-radius:7px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:12px}
+  .imgbox{display:flex;align-items:center;justify-content:center;overflow:hidden}
+  figure img{display:block;max-width:100%;height:auto;border-radius:6px;transition:transform .15s}
+  /* rotaciones en pantalla */
+  figure[data-deg="90"] img,figure[data-deg="270"] img{max-width:none;max-height:70vh}
+  .tip{color:#dfe4ea;font-size:13px;text-align:center;max-width:600px;margin:0 auto 6px}
   @media print{
     @page{ size: portrait; margin:0; }
     body{background:#fff}
     .bar,.tip{display:none}
     .wrap{padding:0;gap:0}
-    /* cada foto llena una hoja; la imagen se ROTA 90° para aprovechar todo (girar el papel para leer) */
     figure{break-inside:avoid;page-break-inside:avoid;box-shadow:none;border-radius:0;padding:0;margin:0;
       width:210mm;height:297mm;display:flex;align-items:center;justify-content:center;overflow:hidden}
     figure + figure{break-before:page;page-break-before:always}
     figure .lab{display:none}
-    /* al rotar 90°: el ancho de la imagen ocupa el ALTO de la hoja (297mm) y viceversa */
-    figure img{transform:rotate(90deg) translateZ(0);transform-origin:center;
-      width:270mm;height:auto;max-height:200mm;object-fit:contain;border-radius:0}
+    .imgbox{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+    /* sin rotar: foto horizontal normal */
+    figure[data-deg="0"] img,figure[data-deg="180"] img{width:auto;height:auto;max-width:200mm;max-height:287mm;object-fit:contain}
+    figure[data-deg="180"] img{transform:rotate(180deg)}
+    /* rotada 90/270: la imagen se para y llena la hoja vertical */
+    figure[data-deg="90"] img,figure[data-deg="270"] img{transform-origin:center;width:285mm;height:auto;max-height:200mm;object-fit:contain}
+    figure[data-deg="90"] img{transform:rotate(90deg)}
+    figure[data-deg="270"] img{transform:rotate(270deg)}
   }
 </style></head><body>
 <div class="bar"><h1>${titulo}</h1><button onclick="window.print()">🖨 Imprimir / Guardar PDF</button></div>
 <div class="wrap">
-  <div class="tip">Aquí están las fotos de medidas en grande. Pulsa "Imprimir / Guardar PDF" — saldrán en hoja horizontal, una por página. También puedes guardar cada imagen con clic derecho.</div>
+  <div class="tip">Si una foto sale de lado o de cabeza, usa "⟳ Girar esta foto" hasta verla derecha. Lo que ves aquí es lo que se imprime. Luego pulsa "Imprimir / Guardar PDF".</div>
   ${cuerpo}
-</div></body></html>`;
+</div>
+<script>
+function girarFoto(btn){
+  const fig=btn.closest('figure');
+  let d=parseInt(fig.getAttribute('data-deg'))||0;
+  d=(d+90)%360; fig.setAttribute('data-deg',d);
+  const img=fig.querySelector('img');
+  img.style.transform='rotate('+d+'deg)';
+}
+<\/script>
+</body></html>`;
 
   const w=window.open('','_blank');
   if(!w){ alert('Permite las ventanas emergentes para ver las fotos.'); return; }
