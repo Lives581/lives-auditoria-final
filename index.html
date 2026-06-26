@@ -84,6 +84,11 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
   <div class="code">AC-009-25 · CALIDAD MANUFACTURA</div>
 </header>
 
+<div id="pendBar" style="display:none;position:sticky;top:0;z-index:50;background:#1f3864;color:#fff;padding:10px 14px;display:none;align-items:center;justify-content:space-between;gap:10px;font-size:14px">
+  <span id="pendTxt">📥 Tienes auditorías pendientes de enviar</span>
+  <button id="pendBtn" style="background:#e9c46a;color:#1f3864;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;white-space:nowrap">Enviar ahora</button>
+</div>
+
 <div class="wrap">
   <!-- CABECERA -->
   <div class="card">
@@ -648,14 +653,49 @@ $('po').addEventListener('change',()=>{ autocompletarPorPO(); refrescarCascada()
 $('estiloL').addEventListener('change',()=>{ refrescarCascada(); });
 $('color').addEventListener('change',()=>{ refrescarCascada(); });
 
-/* ===== guardar ===== */
-function toast(m,t){const e=$('toast');e.textContent=m;e.className='toast show '+(t||'');setTimeout(()=>e.className='toast',2800);}
-$('save').onclick=async()=>{
-  const btn=$('save');btn.disabled=true;btn.textContent='Guardando…';
+/* ===== guardar (con cola offline) ===== */
+function toast(m,t){const e=$('toast');e.textContent=m;e.className='toast show '+(t||'');setTimeout(()=>e.className='toast',3200);}
+
+/* ---- cola offline en IndexedDB (soporta fotos pesadas) ---- */
+const DB_NAME='lives_aud_pend', STORE='cola';
+function db(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);
+  r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});};
+  r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);});}
+async function colaAdd(payload){const d=await db();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).add({payload,ts:Date.now()});tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+async function colaAll(){const d=await db();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readonly');const rq=tx.objectStore(STORE).getAll();rq.onsuccess=()=>res(rq.result||[]);rq.onerror=()=>rej(rq.error);});}
+async function colaDel(id){const d=await db();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+async function colaCount(){try{return (await colaAll()).length;}catch(e){return 0;}}
+
+async function refrescarPend(){
+  const n=await colaCount(); const bar=$('pendBar');
+  if(n>0){bar.style.display='flex';$('pendTxt').textContent='📥 '+n+' auditoría(s) pendiente(s) de enviar';}
+  else{bar.style.display='none';}
+}
+async function enviarUno(payload){
+  const res=await fetch(APP_URL,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}});
+  const data=await res.json(); if(!data.ok) throw new Error(data.error||'Error'); return data;
+}
+async function enviarPendientes(){
+  const items=await colaAll(); if(!items.length){toast('No hay pendientes','ok');return;}
+  const btn=$('pendBtn'); btn.disabled=true; btn.textContent='Enviando…';
+  let okN=0, failN=0;
+  for(const it of items){
+    try{ await enviarUno(it.payload); await colaDel(it.id); okN++; await refrescarPend(); }
+    catch(e){ failN++; }
+  }
+  btn.disabled=false; btn.textContent='Enviar ahora';
+  await refrescarPend();
+  if(failN===0) toast('Enviadas '+okN+' auditoría(s) ✓','ok');
+  else toast('Enviadas '+okN+', fallaron '+failN+' (reintenta con señal)','err');
+  cargarAud();
+}
+$('pendBtn').onclick=enviarPendientes;
+
+function armarPayload(){
   const nom=$('cliente').value; const cod=(v('grupo').substring(0,3)||'AUD').toUpperCase();
   const interno=S.proceso==='Acabados Final (interno)';
   const recibido=parseInt(v('recibido'))||0;
-  const payload={
+  return {
     cliente_cod:cod,cliente:nom,fecha:v('fecha'),n_auditoria:S.nAud,proceso:S.proceso,int_ext:S.int_ext,reproceso:S.reproceso?'SÍ':'NO',
     servicio:interno?'Acabados Final':v('taller'),grupo:v('grupo'),estilo_lives:v('estiloL'),estilo_cliente:v('estiloC'),
     po:v('po'),color:v('color'),destino:v('destino'),cant_pedido:parseInt(v('pedido'))||'',total_recibido:recibido,
@@ -665,21 +705,40 @@ $('save').onclick=async()=>{
     auditor:v('auditor'),
     defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle})),
     derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle})),
-    fotos_medidas:S.fotosMed,
-    fotos_proceso:S.fotosPro,
-    comentario:v('comentario')
+    fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario')
   };
+}
+
+$('save').onclick=async()=>{
+  const btn=$('save');btn.disabled=true;btn.textContent='Guardando…';
+  const payload=armarPayload();
+  // Si no hay conexión, guardar directo en cola sin intentar
+  if(navigator.onLine===false){
+    try{ await colaAdd(payload); await refrescarPend();
+      toast('Sin señal. Guardada en el celular. Envíala cuando tengas internet.','err');
+      setTimeout(()=>location.reload(),2600);
+    }catch(e){ toast('No se pudo guardar localmente: '+e.message,'err'); btn.disabled=false;btn.textContent='Guardar'; }
+    return;
+  }
   try{
-    const res=await fetch(APP_URL,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}});
-    const data=await res.json();
-    if(data.ok){toast('Guardada '+data.id+' · '+data.resultado,'ok');setTimeout(()=>location.reload(),2200);}
-    else throw new Error(data.error||'Error');
-  }catch(err){toast('No se pudo guardar. '+err.message,'err');btn.disabled=false;btn.textContent='Guardar';}
+    const data=await enviarUno(payload);
+    toast('Guardada '+data.id+' · '+data.resultado,'ok');setTimeout(()=>location.reload(),2200);
+  }catch(err){
+    // falló el envío (señal intermitente) -> guardar en cola
+    try{ await colaAdd(payload); await refrescarPend();
+      toast('No se pudo enviar. Guardada en el celular para enviar luego.','err');
+      setTimeout(()=>location.reload(),2600);
+    }catch(e){ toast('No se pudo guardar: '+e.message,'err'); btn.disabled=false;btn.textContent='Guardar'; }
+  }
 };
+
+// reintento automático suave al recuperar conexión (no envía solo, solo avisa)
+window.addEventListener('online', refrescarPend);
+window.addEventListener('offline', ()=>{ const b=$('pendBar'); });
 
 /* init */
 $('fecha').valueAsDate=new Date();
-loadLists(); cargarAud().then(refrescarCascada); recalc();
+loadLists(); cargarAud().then(refrescarCascada); recalc(); refrescarPend();
 </script>
 </body>
 </html>
