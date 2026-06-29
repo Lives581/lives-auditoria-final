@@ -239,8 +239,8 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
 
   <!-- FOTOS DE MEDIDAS -->
   <div class="card">
-    <div class="sec"><span class="dot"></span>Fotos de hojas de medidas *</div>
-    <div class="hint" style="margin:-6px 0 10px">Obligatorio. Toma foto a las hojas de medidas (puedes varias).</div>
+    <div class="sec"><span class="dot"></span>Fotos de hojas de medidas</div>
+    <div class="hint" style="margin:-6px 0 10px" id="medOblHint">Obligatorio en la 1ra auditoría del lote. En las repetidas es opcional (ya se midió antes).</div>
     <div class="fotos" id="fotosMed"></div>
     <label class="btn" style="display:inline-block;margin-top:6px">📷 Tomar / agregar foto
       <input type="file" accept="image/*" capture="environment" id="inMed" multiple hidden></label>
@@ -249,8 +249,8 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
 
   <!-- FOTOS DE MEDIDAS DE PROCESO (solo Costura taller) -->
   <div class="card" id="cardProceso" style="display:none">
-    <div class="sec"><span class="dot"></span>Fotos de medidas de proceso *</div>
-    <div class="hint" style="margin:-6px 0 10px">Solo para Costura (taller). Obligatorio en ese proceso.</div>
+    <div class="sec"><span class="dot"></span>Fotos de medidas de proceso</div>
+    <div class="hint" style="margin:-6px 0 10px">Solo para Costura (taller). Opcional.</div>
     <div class="fotos" id="fotosPro"></div>
     <label class="btn" style="display:inline-block;margin-top:6px">📷 Tomar / agregar foto
       <input type="file" accept="image/*" capture="environment" id="inPro" multiple hidden></label>
@@ -740,7 +740,15 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 function v(id){return ($(id).value||'').trim();}
 function validate(){
   const lote=parseInt(v('recibido'))||0;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&v('estiloL')&&v('estiloC')&&v('color')&&v('destino')&&S.proceso&&S.nAud && S.fotosMed.length>0 && (!requiereProceso()||S.fotosPro.length>0);
+  const editando = !!S.editId;
+  const esPrimera = (S.nAud==='1ra');
+  // Foto de medidas: obligatoria SOLO en la 1ra auditoría del lote.
+  //   - Repetidas (2da, 3ra...): opcional (ya midió en la 1ra)
+  //   - En corrección: opcional (ya existe en Drive)
+  const fotoMedOK = editando || !esPrimera || S.fotosMed.length>0;
+  // Foto de proceso (costura): SIEMPRE opcional
+  const fotoProOK = true;
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&v('estiloL')&&v('estiloC')&&v('color')&&v('destino')&&S.proceso&&S.nAud && fotoMedOK && fotoProOK;
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
