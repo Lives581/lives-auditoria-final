@@ -88,6 +88,17 @@ async function gviz(tab){
   return (j.table.rows||[]).map(row=>(row.c||[]).map(c=>c&&c.v!=null?String(c.v):''));
 }
 function norm(s){return String(s||'').trim().toLowerCase();}
+// Convierte fechas de gviz "Date(2026,5,15)" a "2026-06-15". Si ya es texto normal, lo deja.
+function fechaTxt(v){
+  if(v==null||v==='') return '';
+  const s=String(v);
+  const m=s.match(/^Date\((\d+),(\d+),(\d+)/);
+  if(m){
+    const a=m[1], mes=('0'+(parseInt(m[2])+1)).slice(-2), d=('0'+m[3]).slice(-2);
+    return a+'-'+mes+'-'+d;
+  }
+  return s.substring(0,10);
+}
 function esEnc(r){return !r[0]||norm(r[0])==='id_auditoria'||norm(r[0])==='';}
 
 async function cargar(){
@@ -108,7 +119,7 @@ function llenarSelect(id,vals){
 }
 function fechaOK(fstr,desde,hasta){
   if(!desde&&!hasta) return true;
-  const f=(fstr||'').substring(0,10);
+  const f=fechaTxt(fstr);
   if(!f) return false;
   if(desde&&f<desde) return false;
   if(hasta&&f>hasta) return false;
@@ -137,7 +148,7 @@ function buscar(){
     return true;
   });
   // más recientes primero
-  res.sort((a,b)=>String(b[C.fecha]).localeCompare(String(a[C.fecha])));
+  res.sort((a,b)=>fechaTxt(b[C.fecha]).localeCompare(fechaTxt(a[C.fecha])));
   pintar(res);
 }
 function pintar(res){
@@ -149,7 +160,7 @@ function pintar(res){
   res.forEach(r=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`<td><b>${r[C.id]||''}</b></td>
-      <td>${(r[C.fecha]||'').substring(0,10)}</td>
+      <td>${fechaTxt(r[C.fecha])}</td>
       <td>${r[C.cliente]||''}<br><span style="color:#889">${r[C.grupo]||''}</span></td>
       <td>${r[C.estiloL]||''}<br><span style="color:#889">${r[C.po]||''}</span></td>
       <td>${r[C.auditor]||''}</td>
