@@ -93,12 +93,12 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
   <!-- MIS AUDITORÍAS (corregir) -->
   <div class="card" style="border:2px dashed #d4e0ee;background:#f7fafc">
     <div class="sec"><span class="dot"></span>¿Necesitas corregir una auditoría que ya hiciste?</div>
-    <div class="hint" style="margin:-6px 0 10px">Busca por tu nombre tus últimas auditorías de esta semana y selecciona la que quieras corregir.</div>
+    <div class="hint" style="margin:-6px 0 10px">Busca por tu nombre tus últimas auditorías (últimos 7 días) y selecciona la que quieras corregir.</div>
     <div class="grid">
       <div class="full"><label>Mi nombre</label><input id="miNombre" list="auditoras2" autocomplete="off" placeholder="Escribe tu nombre">
         <datalist id="auditoras2"></datalist></div>
     </div>
-    <button class="addbtn" id="btnMisAud" style="margin-top:8px">🔍 Ver mis auditorías de esta semana</button>
+    <button class="addbtn" id="btnMisAud" style="margin-top:8px">🔍 Ver mis auditorías recientes</button>
     <div id="misAudList" style="margin-top:10px"></div>
     <div id="modoEdicion" style="display:none;margin-top:10px;padding:10px 12px;background:#fff4e0;border:1px solid #e9c46a;border-radius:10px;font-size:13px;color:#7a5a12">
       ✏️ <b>Estás corrigiendo la auditoría <span id="editId"></span>.</b> Cambia lo que necesites abajo y guarda.
@@ -664,7 +664,7 @@ $('add').onclick=()=>addDef();
 function addDer(preCod){
   const pre=preCod?CAT.find(c=>c[0]===preCod):null;
   const id=++defId;
-  const d={id,categoria:pre?pre[2]:'',cant:1,detalle:''};
+  const d={id,categoria:pre?pre[2]:'',cant:1,detalle:'',foto:''};
   S.ders.push(d);
   const el=document.createElement('div');el.className='def';el.style.borderLeftColor='#5b2d9e';
   el.innerHTML=`<button class="rm">×</button>
@@ -672,6 +672,10 @@ function addDer(preCod){
       <div class="full"><label>Derivado</label><select class="dCat">${catOptsModo('der',d.categoria)}</select></div>
       <div><label>Cantidad (sobre lote)</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
       <div><label>Detalle / nota</label><input class="dDet" placeholder="Opcional"></div>
+      <div class="full"><label>Foto del derivado (opcional)</label>
+        <label class="btn" style="display:inline-block">📷 Tomar foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label>
+        <div class="dPrevWrap" style="display:none;margin-top:8px"><div class="fotoItem" style="max-width:120px"><img class="dPrev"><button type="button" class="dDel del">×</button></div></div>
+      </div>
     </div>`;
   $('ders').appendChild(el);
   const q=s=>el.querySelector(s);
@@ -803,7 +807,7 @@ function armarPayload(){
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
     auditor:v('auditor'),
     defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
-    derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle})),
+    derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
     fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario')
   };
 }
@@ -873,17 +877,19 @@ async function buscarMisAud(){
   if(!nom){ cont.innerHTML='<div class="hint">Escribe tu nombre primero.</div>'; return; }
   cont.innerHTML='<div class="hint">Buscando…</div>';
   if(!AUD_CACHE) await cargarAud();
-  const semAct=semanaActualForm();
-  // filtrar: mismo auditor (AF=31) + semana actual; ordenar por fecha desc; tomar 5
+  // últimos 7 días (más flexible que "semana actual")
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const hace7=new Date(hoy); hace7.setDate(hace7.getDate()-7);
   let mias=(AUD_CACHE||[]).filter(r=>{
     if(!r||r[0]==null||norm(r[0])==='ID_AUDITORIA') return false;
     if(norm(r[31])!==nom) return false;
-    const f=fechaTxtForm(r[1]);
-    return semanaISOde(f)===semAct;
+    const f=fechaTxtForm(r[1]); if(!f) return false;
+    const fd=new Date(f+'T00:00:00'); if(isNaN(fd)) return false;
+    return fd>=hace7;
   });
   mias.sort((a,b)=>fechaTxtForm(b[1]).localeCompare(fechaTxtForm(a[1])));
   mias=mias.slice(0,5);
-  if(!mias.length){ cont.innerHTML='<div class="hint">No encontré auditorías tuyas de esta semana.</div>'; return; }
+  if(!mias.length){ cont.innerHTML='<div class="hint">No encontré auditorías tuyas en los últimos 7 días.</div>'; return; }
   let h='';
   mias.forEach(r=>{
     const id=r[0], fecha=fechaTxtForm(r[1]), grupo=r[7]||'', estilo=r[8]||'', po=r[10]||'', proc=r[3]||'', res=r[27]||'';
@@ -916,7 +922,7 @@ function cargarParaEditar(id){
   S.editId=id;
   $('editId').textContent=id;
   $('modoEdicion').style.display='block';
-  $('btnMisAud').textContent='🔍 Ver mis auditorías de esta semana';
+  $('btnMisAud').textContent='🔍 Ver mis auditorías recientes';
   // Recalcular y refrescar
   if(typeof aplicarCliente==='function') aplicarCliente();
   if(typeof fillTaller==='function' && S.proceso) fillTaller(S.proceso);
