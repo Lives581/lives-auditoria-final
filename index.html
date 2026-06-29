@@ -817,13 +817,31 @@ function armarPayload(){
     auditor:v('auditor'),
     defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
     derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
-    fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario')
+    fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario'),
+    modo: S.editId ? 'actualizar' : 'nuevo',
+    edit_id: S.editId || ''
   };
 }
 
 $('save').onclick=async()=>{
   const btn=$('save');btn.disabled=true;btn.textContent='Guardando…';
   const payload=armarPayload();
+  // CORRECCIÓN: requiere conexión (no se encola, para no duplicar)
+  if(S.editId){
+    if(navigator.onLine===false){
+      toast('Para corregir necesitas señal. Inténtalo con internet.','err');
+      btn.disabled=false; btn.textContent='Guardar'; return;
+    }
+    try{
+      const data=await enviarUno(payload);
+      toast('Corrección guardada · '+(data.id||S.editId),'ok');
+      setTimeout(()=>location.reload(),2000);
+    }catch(err){
+      toast('No se pudo guardar la corrección: '+(err.message||err),'err');
+      btn.disabled=false; btn.textContent='Guardar';
+    }
+    return;
+  }
   // Si no hay conexión, guardar directo en cola sin intentar
   if(navigator.onLine===false){
     try{ await colaAdd(payload); await refrescarPend();
