@@ -223,8 +223,12 @@ function render(r,defs,ders){
   // Derivados
   html+=`<h2>Derivados (${ders.length})</h2>`;
   if(ders.length){
-    html+=`<table><thead><tr><th>Categoría</th><th>Cant. (lote)</th><th>Detalle</th></tr></thead><tbody>`;
-    ders.forEach(d=>{ html+=`<tr><td>${esc(d[2])}</td><td>${esc(d[3])}</td><td>${esc(d[4])}</td></tr>`; });
+    html+=`<table><thead><tr><th>Categoría</th><th>Cant. (lote)</th><th>Detalle</th><th>Foto</th></tr></thead><tbody>`;
+    ders.forEach(d=>{
+      const tituloDer = 'Derivado: ' + (d[2]||'');
+      const foto = d[5] ? `<div class="deffotoWrap"><div class="deflab">${esc(tituloDer)}</div><img src="${driveImg(d[5])}" class="deffoto" onclick="abrirLb('${driveImgFull(d[5])}', '${esc(tituloDer).replace(/'/g,"\\'")}')" alt="foto derivado"></div>` : '—';
+      html+=`<tr><td>${esc(d[2])}</td><td>${esc(d[3])}</td><td>${esc(d[4])}</td><td>${foto}</td></tr>`;
+    });
     html+=`</tbody></table>`;
   } else { html+=`<div class="coment">Sin derivados registrados.</div>`; }
 
