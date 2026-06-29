@@ -328,6 +328,7 @@ function ordinalTexto(n){
 }
 async function calcOrdinal(){
   const out=$('ordinal'), h=$('ordHint');
+  if(S.editId){ /* en modo corrección, el N° no se recalcula (se mantiene el original) */ validate(); return; }
   if(!loteCompleto()){ out.value='—'; S.nAud=''; h.className='hint'; h.textContent='Completa grupo, estilo, PO, color y proceso.'; validate(); return; }
   out.value='Calculando…'; h.className='hint'; h.textContent='Buscando auditorías previas…';
   if(!AUD_CACHE) await cargarAud();
@@ -931,6 +932,11 @@ function cargarParaEditar(id){
   $('auditor').value=r[31]||''; $('fecha').value=fechaTxtForm(r[1]);
   // proceso
   const proc=r[3]||''; const selP=$('proceso'); if(selP){ selP.value=proc; S.proceso=proc; }
+  // N° de auditoría: conservar el mismo de la auditoría original (col C = idx 2)
+  S.nAud = r[2] || '';
+  const outOrd=$('ordinal'); if(outOrd) outOrd.value = S.nAud || '—';
+  const ordH=$('ordHint'); if(ordH) ordH.textContent='N° original de esta auditoría (no cambia al corregir).';
+  S.int_ext = (norm(proc).indexOf('interno')>=0) ? 'INTERNA' : (proc?'EXTERNA':'');
   // medidas
   $('medMuestra').value=r[28]||''; $('medDef').value=r[29]||''; $('medRes').value=r[30]||'';
   // comentario
