@@ -871,18 +871,24 @@ function semanaActualForm(){
   return semanaISOde(f);
 }
 
+function nombreNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
 async function buscarMisAud(){
   const nom=($('miNombre').value||'').trim().toLowerCase();
   const cont=$('misAudList');
   if(!nom){ cont.innerHTML='<div class="hint">Escribe tu nombre primero.</div>'; return; }
   cont.innerHTML='<div class="hint">Buscando…</div>';
   if(!AUD_CACHE) await cargarAud();
-  console.log('[MisAud] buscando:', nom, '| total filas:', (AUD_CACHE||[]).length);
-  // Filtrar por nombre (flexible) y por las semanas recientes usando SEMANA(32)+AÑO(37) del Sheet
+  const nomN=nombreNorm(nom);
+  console.log('[MisAud] buscando:', nomN, '| total filas:', (AUD_CACHE||[]).length);
+  // Filtrar por nombre tolerante (sin tildes, espacios/saltos colapsados, por palabras)
   let candidatos=(AUD_CACHE||[]).filter(r=>{
     if(!r||r[0]==null||norm(r[0])==='ID_AUDITORIA') return false;
-    const aud=norm(r[31]);
-    return aud && (aud.indexOf(nom)>=0 || nom.indexOf(aud)>=0);
+    const audN=nombreNorm(r[31]);
+    if(!audN) return false;
+    // coincide si una contiene a la otra, o si comparten todas las palabras escritas
+    if(audN.indexOf(nomN)>=0 || nomN.indexOf(audN)>=0) return true;
+    const palabras=nomN.split(' ').filter(Boolean);
+    return palabras.length>0 && palabras.every(p=>audN.indexOf(p)>=0);
   });
   console.log('[MisAud] por nombre:', candidatos.length);
   // ordenar por año+semana desc y por id, tomar las 5 más recientes (sin filtro de fecha estricto)
