@@ -563,7 +563,7 @@ function catOptsModo(modo,sel){
 function addDef(preCod){
   const pre=preCod?CAT.find(c=>c[0]===preCod):null;
   const id=++defId;
-  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',cant:1,detalle:''};
+  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',cant:1,detalle:'',foto:''};
   S.defs.push(d);
   const el=document.createElement('div');el.className='def';
   el.innerHTML=`<button class="rm">×</button>
@@ -572,6 +572,10 @@ function addDef(preCod){
       <div><label>Cantidad</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
       <div class="full"><label>Categoría</label><select class="dCat">${catOptsModo('def',d.categoria)}</select></div>
       <div class="full"><label>Detalle / nota</label><input class="dDet" placeholder="Ej. hilo contaminado negro"></div>
+      <div class="full"><label>Foto del defecto (opcional)</label>
+        <label class="btn" style="display:inline-block">📷 Tomar foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label>
+        <div class="dPrevWrap" style="display:none;margin-top:8px"><div class="fotoItem" style="max-width:120px"><img class="dPrev"><button type="button" class="dDel del">×</button></div></div>
+      </div>
     </div>`;
   $('defs').appendChild(el);
   const q=s=>el.querySelector(s);
@@ -583,6 +587,8 @@ function addDef(preCod){
   q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
   q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
   q('.dCant').oninput=e=>{d.cant=parseInt(e.target.value)||0;recalc();};
+  q('.dFoto').onchange=e=>{const f=e.target.files[0];if(!f)return;shrink(f,b64=>{d.foto=b64;q('.dPrev').src=b64;q('.dPrevWrap').style.display='block';});};
+  q('.dDel').onclick=()=>{d.foto='';q('.dPrevWrap').style.display='none';q('.dFoto').value='';};
   recalc();
 }
 $('add').onclick=()=>addDef();
@@ -609,6 +615,8 @@ function addDer(preCod){
   q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
   q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
   q('.dCant').oninput=e=>{d.cant=parseInt(e.target.value)||0;recalc();};
+  q('.dFoto').onchange=e=>{const f=e.target.files[0];if(!f)return;shrink(f,b64=>{d.foto=b64;q('.dPrev').src=b64;q('.dPrevWrap').style.display='block';});};
+  q('.dDel').onclick=()=>{d.foto='';q('.dPrevWrap').style.display='none';q('.dFoto').value='';};
   recalc();
 }
 $('addDer').onclick=()=>addDer();
@@ -661,7 +669,7 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 function v(id){return ($(id).value||'').trim();}
 function validate(){
   const lote=parseInt(v('recibido'))||0;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&S.proceso&&S.nAud && S.fotosMed.length>0 && (!requiereProceso()||S.fotosPro.length>0);
+  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&v('estiloL')&&v('estiloC')&&v('color')&&v('destino')&&S.proceso&&S.nAud && S.fotosMed.length>0 && (!requiereProceso()||S.fotosPro.length>0);
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
@@ -725,7 +733,7 @@ function armarPayload(){
     override:S.override?'SÍ':'NO',override_autoriza:v('ovWho'),override_motivo:v('ovWhy'),
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
     auditor:v('auditor'),
-    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle})),
+    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
     derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle})),
     fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario')
   };
@@ -766,7 +774,7 @@ function upperOf(id){
     try{el.setSelectionRange(p,p);}catch(e){}
   });
 }
-['grupo','estiloL','estiloC','po','color','destino','auditor','comentario','ovWho','ovWhy','medRes'].forEach(upperOf);
+['grupo','estiloL','estiloC','po','color','destino','auditor','comentario','ovWho','ovWhy'].forEach(upperOf);
 
 /* init */
 $('fecha').valueAsDate=new Date();
