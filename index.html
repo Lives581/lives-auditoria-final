@@ -138,6 +138,13 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
         <div class="hint" id="pedHint"></div></div>
       <div><label>Total recibido (lote) *</label><input id="recibido" inputmode="numeric" placeholder="503">
         <div class="hint">El lote que llegó para auditar.</div></div>
+      <div class="full" id="avanceBox" style="display:none;background:#eef7f4;border:1px solid #bfe3da;border-radius:12px;padding:12px 14px;margin-top:4px">
+        <div style="font-size:12px;font-weight:700;color:#1c7a6e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📊 Avance de este pedido</div>
+        <div id="avanceTxt" style="font-size:13px;color:#334;line-height:1.6"></div>
+        <div style="background:#d4ece6;border-radius:20px;height:14px;margin-top:8px;overflow:hidden">
+          <div id="avanceBar" style="height:100%;width:0%;background:#2a9d8f;border-radius:20px;transition:width .3s"></div>
+        </div>
+      </div>
       <div class="full"><label>Auditor *</label><input id="auditor" list="auditoras" autocomplete="off" placeholder="Escribe y selecciona tu nombre">
         <datalist id="auditoras"></datalist></div>
       <div class="full"><label>Fecha *</label><input id="fecha" type="date"></div>
@@ -319,9 +326,52 @@ async function calcOrdinal(){
   h.className='hint'; h.textContent=previas? (previas+' auditoría(s) previa(s) de este tipo en el lote') : 'Primera auditoría de este tipo en el lote';
   aplicarPedido();
   mostrarPanelPrevias();
+  calcAvance();
   validate();
 }
 function pedirOrdinal(){ clearTimeout(ordTimer); ordTimer=setTimeout(calcOrdinal,400); }
+
+/* ===== AVANCE DEL PEDIDO (% auditado del lote vs cant. pedido) ===== */
+function calcAvance(){
+  const box=$('avanceBox');
+  if(!loteCompleto()){ box.style.display='none'; return; }
+  const key=llaveActual(), proc=norm(S.proceso);
+  let lotePrevio=0, pedidoRef=0;
+  (AUD_CACHE||[]).forEach(r=>{
+    if(!r||r[0]==null||norm(r[0])==='ID_AUDITORIA') return;
+    if(llaveFila(r)===key && norm(r[3])===proc){
+      // computable: AM = idx 38 (1 = auditoría real). Solo sumamos reales.
+      const comp = (r[38]===''||r[38]==null) ? 1 : (Number(r[38])||0);
+      if(comp===1) lotePrevio += Number(r[14])||0;   // O=14 TOTAL_RECIBIDO (lote)
+      // pedido de referencia: N=13 CANT_PEDIDO (el de la primera auditoría que lo puso)
+      const ped = Number(r[13])||0;
+      if(ped>pedidoRef) pedidoRef = ped;
+    }
+  });
+  // pedido: usa el de las previas, o el que escribió el usuario ahora
+  const pedidoActual = parseInt(v('pedido'))||0;
+  const pedido = pedidoRef || pedidoActual;
+  if(!pedido){ box.style.display='none'; return; }
+
+  const loteActual = parseInt(v('recibido'))||0;
+  const pctPrev = Math.round(lotePrevio/pedido*100);
+  const totalConActual = lotePrevio + loteActual;
+  const pctActual = Math.round(totalConActual/pedido*100);
+  const falta = Math.max(0, pedido - totalConActual);
+  const pctFalta = Math.max(0, 100 - pctActual);
+
+  box.style.display='block';
+  let txt = `<b>Pedido total:</b> ${pedido} prendas<br>`;
+  txt += `<b>Antes de ti:</b> ${lotePrevio} auditadas (${pctPrev}%)<br>`;
+  if(loteActual>0){
+    txt += `<b>Con tu lote (${loteActual}):</b> ${totalConActual} auditadas (${pctActual}%)<br>`;
+    txt += `<b>Falta:</b> ${falta} prendas (${pctFalta}%)`;
+  } else {
+    txt += `<span style="color:#889">Ingresa tu lote para ver el nuevo avance.</span>`;
+  }
+  $('avanceTxt').innerHTML = txt;
+  $('avanceBar').style.width = Math.min(100, loteActual>0?pctActual:pctPrev) + '%';
+}
 
 /* ===== FOTOS DE MEDIDAS ===== */
 const MAX_FOTOS=10;
@@ -675,6 +725,8 @@ function validate(){
   $('save').disabled=!ok;
 }
 ['po','recibido','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
+$('recibido').addEventListener('input',calcAvance);
+$('pedido').addEventListener('input',calcAvance);
 $('grupo').addEventListener('input',aplicarCliente);
 $('medDef').addEventListener('input',maskMedidas);
 ['grupo','estiloL','estiloC','color','po','destino'].forEach(id=>$(id).addEventListener('input',()=>{ refrescarCascada(); pedirOrdinal(); }));
