@@ -877,18 +877,24 @@ async function buscarMisAud(){
   if(!nom){ cont.innerHTML='<div class="hint">Escribe tu nombre primero.</div>'; return; }
   cont.innerHTML='<div class="hint">Buscando…</div>';
   if(!AUD_CACHE) await cargarAud();
-  // últimos 7 días (más flexible que "semana actual")
-  const hoy=new Date(); hoy.setHours(0,0,0,0);
-  const hace7=new Date(hoy); hace7.setDate(hace7.getDate()-7);
-  let mias=(AUD_CACHE||[]).filter(r=>{
+  console.log('[MisAud] buscando:', nom, '| total filas:', (AUD_CACHE||[]).length);
+  // Filtrar por nombre (flexible) y por las semanas recientes usando SEMANA(32)+AÑO(37) del Sheet
+  let candidatos=(AUD_CACHE||[]).filter(r=>{
     if(!r||r[0]==null||norm(r[0])==='ID_AUDITORIA') return false;
-    if(norm(r[31])!==nom) return false;
-    const f=fechaTxtForm(r[1]); if(!f) return false;
-    const fd=new Date(f+'T00:00:00'); if(isNaN(fd)) return false;
-    return fd>=hace7;
+    const aud=norm(r[31]);
+    return aud && (aud.indexOf(nom)>=0 || nom.indexOf(aud)>=0);
   });
-  mias.sort((a,b)=>fechaTxtForm(b[1]).localeCompare(fechaTxtForm(a[1])));
-  mias=mias.slice(0,5);
+  console.log('[MisAud] por nombre:', candidatos.length);
+  // ordenar por año+semana desc y por id, tomar las 5 más recientes (sin filtro de fecha estricto)
+  candidatos.sort((a,b)=>{
+    const ya=Number(a[37])||0, yb=Number(b[37])||0;
+    if(yb!==ya) return yb-ya;
+    const sa=Number(a[32])||0, sb=Number(b[32])||0;
+    if(sb!==sa) return sb-sa;
+    return String(b[0]).localeCompare(String(a[0]));
+  });
+  let mias=candidatos.slice(0,5);
+  console.log('[MisAud] mostrando:', mias.length);
   if(!mias.length){ cont.innerHTML='<div class="hint">No encontré auditorías tuyas en los últimos 7 días.</div>'; return; }
   let h='';
   mias.forEach(r=>{
