@@ -274,7 +274,9 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
 <div class="bar"><div class="inner">
   <div class="verdict" id="verdict"><div class="vk">Veredicto</div><div class="vv" id="vText">—</div></div>
   <button class="save" id="save" disabled>Guardar</button>
-</div></div>
+</div>
+<div id="faltanBox" style="display:none;background:#fdf5e3;border-top:1px solid #e9c46a;color:#7a5a12;font-size:12.5px;padding:8px 14px;text-align:center"></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -751,16 +753,38 @@ function validate(){
   const lote=parseInt(v('recibido'))||0;
   const editando = !!S.editId;
   const esPrimera = (S.nAud==='1ra');
-  // Foto de medidas: obligatoria SOLO en la 1ra auditoría del lote.
-  //   - Repetidas (2da, 3ra...): opcional (ya midió en la 1ra)
-  //   - En corrección: opcional (ya existe en Drive)
   const fotoMedOK = editando || !esPrimera || S.fotosMed.length>0;
-  // Foto de proceso (costura): SIEMPRE opcional
-  const fotoProOK = true;
-  let ok = v2('po')&&lote&&v2('auditor')&&v('fecha')&&v2('grupo')&&v('pedido')&&v2('estiloL')&&v2('estiloC')&&v2('color')&&v2('destino')&&S.proceso&&S.nAud && fotoMedOK && fotoProOK;
-  if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
-  if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
+
+  // Armar lista de lo que falta (para avisar a la auditora)
+  const faltan=[];
+  if(!v2('grupo')) faltan.push('Grupo');
+  if(!v2('estiloL')) faltan.push('Estilo LIVES');
+  if(!v2('estiloC')) faltan.push('Estilo cliente');
+  if(!v2('po')) faltan.push('PO');
+  if(!v2('color')) faltan.push('Color');
+  if(!v2('destino')) faltan.push('Destino');
+  if(!v('pedido')) faltan.push('Cant. pedido');
+  if(!lote) faltan.push('Total recibido');
+  if(!S.proceso) faltan.push('Proceso');
+  if(!v2('auditor')) faltan.push('Auditor');
+  if(!v('fecha')) faltan.push('Fecha');
+  if(!S.nAud) faltan.push('N° de auditoría (completa grupo/estilo/PO/color/proceso)');
+  if(!fotoMedOK) faltan.push('Foto de hojas de medidas');
+  if(S.proceso&&S.int_ext==='EXTERNA'&&!v('taller')) faltan.push('Taller');
+  if(S.override&&(!v('ovWho')||!v('ovWhy'))) faltan.push('Datos del override');
+
+  const ok = faltan.length===0;
   $('save').disabled=!ok;
+
+  // Mostrar el aviso de faltantes
+  const av=$('faltanBox');
+  if(av){
+    if(ok){ av.style.display='none'; }
+    else {
+      av.style.display='block';
+      av.innerHTML = '⚠️ Falta llenar: <b>' + faltan.join(', ') + '</b>';
+    }
+  }
 }
 ['po','recibido','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('recibido').addEventListener('input',calcAvance);
