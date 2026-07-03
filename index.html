@@ -250,7 +250,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
     <div class="hint" style="margin:-6px 0 10px" id="medOblHint">Obligatorio en la 1ra auditoría del lote. En las repetidas es opcional (ya se midió antes).</div>
     <div class="fotos" id="fotosMed"></div>
     <label class="btn" style="display:inline-block;margin-top:6px">📷 Tomar / agregar foto
-      <input type="file" accept="image/*" capture="environment" id="inMed" multiple hidden></label>
+      <input type="file" accept="image/*" id="inMed" multiple hidden></label>
     <div class="hint" id="medCount">0 fotos · máximo 10</div>
   </div>
 
@@ -260,7 +260,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
     <div class="hint" style="margin:-6px 0 10px">Solo para Costura (taller). Opcional.</div>
     <div class="fotos" id="fotosPro"></div>
     <label class="btn" style="display:inline-block;margin-top:6px">📷 Tomar / agregar foto
-      <input type="file" accept="image/*" capture="environment" id="inPro" multiple hidden></label>
+      <input type="file" accept="image/*" id="inPro" multiple hidden></label>
     <div class="hint" id="proCount">0 fotos · máximo 10</div>
   </div>
 
@@ -648,7 +648,7 @@ function addDef(preCod){
       <div class="full"><label>Categoría</label><select class="dCat">${catOptsModo('def',d.categoria)}</select></div>
       <div class="full"><label>Detalle / nota</label><input class="dDet" placeholder="Ej. hilo contaminado negro"></div>
       <div class="full"><label>Foto del defecto (opcional)</label>
-        <label class="btn" style="display:inline-block">📷 Tomar foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label>
+        <label class="btn" style="display:inline-block">📷 Foto / galería<input type="file" accept="image/*" class="dFoto" hidden></label>
         <div class="dPrevWrap" style="display:none;margin-top:8px"><div class="fotoItem" style="max-width:120px"><img class="dPrev"><button type="button" class="dDel del">×</button></div></div>
       </div>
     </div>`;
@@ -681,7 +681,7 @@ function addDer(preCod){
       <div><label>Cantidad (sobre lote)</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
       <div><label>Detalle / nota</label><input class="dDet" placeholder="Opcional"></div>
       <div class="full"><label>Foto del derivado (opcional)</label>
-        <label class="btn" style="display:inline-block">📷 Tomar foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label>
+        <label class="btn" style="display:inline-block">📷 Foto / galería<input type="file" accept="image/*" class="dFoto" hidden></label>
         <div class="dPrevWrap" style="display:none;margin-top:8px"><div class="fotoItem" style="max-width:120px"><img class="dPrev"><button type="button" class="dDel del">×</button></div></div>
       </div>
     </div>`;
@@ -746,6 +746,7 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 
 /* ===== validación ===== */
 function v(id){return ($(id).value||'').trim();}
+function v2(id){ return v(id).length>=2; }  // texto con al menos 2 caracteres reales
 function validate(){
   const lote=parseInt(v('recibido'))||0;
   const editando = !!S.editId;
@@ -756,7 +757,7 @@ function validate(){
   const fotoMedOK = editando || !esPrimera || S.fotosMed.length>0;
   // Foto de proceso (costura): SIEMPRE opcional
   const fotoProOK = true;
-  let ok = v('po')&&lote&&v('auditor')&&v('fecha')&&v('grupo')&&v('pedido')&&v('estiloL')&&v('estiloC')&&v('color')&&v('destino')&&S.proceso&&S.nAud && fotoMedOK && fotoProOK;
+  let ok = v2('po')&&lote&&v2('auditor')&&v('fecha')&&v2('grupo')&&v('pedido')&&v2('estiloL')&&v2('estiloC')&&v2('color')&&v2('destino')&&S.proceso&&S.nAud && fotoMedOK && fotoProOK;
   if(S.proceso&&S.int_ext==='EXTERNO') ok=ok&&v('taller');
   if(S.override) ok=ok&&v('ovWho')&&v('ovWhy');
   $('save').disabled=!ok;
