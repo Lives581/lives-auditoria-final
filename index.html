@@ -294,7 +294,7 @@ const AQL=[{min:2,max:8,n:2,a:{'1.0':0,'1.5':0,'2.5':0}},{min:9,max:15,n:3,a:{'1
 function aqlFor(l,niv){const r=AQL.find(x=>l>=x.min&&l<=x.max);return r?{muestra:r.n,acepta:r.a[niv],rechaza:r.a[niv]+1}:null;}
 
 /* ===== CATÁLOGO defectos+derivados (dinámico desde hoja CATÁLOGO) ===== */
-let CAT=[];          // [[COD, SECCION_norm, NOMBRE], ...]  SECCION_norm: 'Acabados'|'Costura'|'Derivados'
+let CAT=[];          // [[COD, SECCION_norm, MADRE, SUBTIPO], ...]  SUBTIPO puede ser '' si la madre no tiene subtipos
 let FRECUENTES=['CO01','CO02','CO17','AC01','AC15'];  // fallback; se recalcula tras cargar
 const FRECUENTES_DER=['DE01','DE02','DE03'];          // derivados frecuentes
 
@@ -543,9 +543,9 @@ async function loadLists(){
     if(S.proceso) fillTaller(S.proceso);
   }catch(e){/* si falla, el form sigue usable y las listas se llenan luego */}
   try{
-    const rows=await gviz('CATÁLOGO');               // A=COD, B=SECCIÓN, C=NOMBRE (fila1 = encabezados)
+    const rows=await gviz('CATÁLOGO');               // A=COD, B=SECCIÓN, C=CATEGORIA_MADRE, D=SUBTIPO (fila1 = encabezados)
     const cat=rows.filter(r=>r[0]&&r[0].toUpperCase()!=='COD'&&r[2])
-                  .map(r=>[r[0].trim(), normSec(r[1]), r[2].trim()]);
+                  .map(r=>[r[0].trim(), normSec(r[1]), r[2].trim(), (r[3]||'').toString().trim()]);
     if(cat.length){ CAT=cat; }
   }catch(e){/* si falla, CAT queda vacío y se avisa */}
   try{
@@ -634,20 +634,37 @@ function resetOv(){S.override=false;$('ovSwitch').checked=false;$('ovFields').cl
 function catItems(modo){ // modo: 'def' = Acabados+Costura ; 'der' = Derivados
   return CAT.filter(c=> modo==='der' ? c[1]==='Derivados' : (c[1]==='Acabados'||c[1]==='Costura'));
 }
-function catOptsModo(modo,sel){
-  return catItems(modo).map(c=>`<option value="${c[2]}" ${c[2]===sel?'selected':''}>${c[2]}</option>`).join('');
+// Lista de categorías MADRE únicas (sin repetir), en orden de aparición
+function madresUnicas(modo){
+  const vistos=new Set(), out=[];
+  catItems(modo).forEach(c=>{ if(!vistos.has(c[2])){ vistos.add(c[2]); out.push(c[2]); } });
+  return out;
+}
+function madreOptsModo(modo,sel){
+  return madresUnicas(modo).map(m=>`<option value="${m}" ${m===sel?'selected':''}>${m}</option>`).join('');
+}
+// Subtipos disponibles para una madre dada (vacío si esa madre no tiene subtipos)
+function subtiposDe(modo,madre){
+  return catItems(modo).filter(c=>c[2]===madre && c[3]).map(c=>c[3]);
+}
+function subOptsModo(modo,madre,sel){
+  const subs=subtiposDe(modo,madre);
+  if(!subs.length) return '';
+  return '<option value="">— Elegir —</option>'+subs.map(s=>`<option value="${s}" ${s===sel?'selected':''}>${s}</option>`).join('');
 }
 function addDef(preCod){
   const pre=preCod?CAT.find(c=>c[0]===preCod):null;
   const id=++defId;
-  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',cant:1,detalle:'',foto:''};
+  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
   S.defs.push(d);
+  const tieneSub=d.categoria&&subtiposDe('def',d.categoria).length>0;
   const el=document.createElement('div');el.className='def';
   el.innerHTML=`<button class="rm">×</button>
     <div class="grid">
       <div><label>Sección</label><select class="dSec"><option ${d.seccion==='Acabados'?'selected':''}>Acabados</option><option ${d.seccion==='Costura'?'selected':''}>Costura</option></select></div>
       <div><label>Cantidad</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
-      <div class="full"><label>Categoría</label><select class="dCat">${catOptsModo('def',d.categoria)}</select></div>
+      <div class="full"><label>Categoría</label><select class="dCat">${madreOptsModo('def',d.categoria)}</select></div>
+      <div class="full dSubWrap" style="display:${tieneSub?'block':'none'}"><label>Subtipo</label><select class="dSub">${subOptsModo('def',d.categoria,d.subtipo)}</select></div>
       <div class="full"><label>Detalle / nota</label><input class="dDet" placeholder="Ej. hilo contaminado negro"></div>
       <div class="full"><label>Foto del defecto (opcional)</label>
         <label class="btn" style="display:inline-block">📷 Foto / galería<input type="file" accept="image/*" class="dFoto" hidden></label>
@@ -659,7 +676,15 @@ function addDef(preCod){
   if(d.categoria) q('.dCat').value=d.categoria;
   q('.rm').onclick=()=>{S.defs=S.defs.filter(x=>x.id!==id);el.remove();recalc();};
   q('.dSec').onchange=e=>{d.seccion=e.target.value;};
-  q('.dCat').onchange=e=>{d.categoria=e.target.value; const f=CAT.find(c=>c[2]===d.categoria); if(f)d.seccion=f[1]; q('.dSec').value=(f&&f[1]==='Acabados')?'Acabados':'Costura';};
+  q('.dCat').onchange=e=>{
+    d.categoria=e.target.value; d.subtipo='';
+    const f=CAT.find(c=>c[2]===d.categoria); if(f)d.seccion=f[1]; q('.dSec').value=(f&&f[1]==='Acabados')?'Acabados':'Costura';
+    const subs=subtiposDe('def',d.categoria);
+    const wrap=q('.dSubWrap');
+    if(subs.length){ wrap.style.display='block'; q('.dSub').innerHTML=subOptsModo('def',d.categoria,''); }
+    else { wrap.style.display='none'; q('.dSub').innerHTML=''; }
+  };
+  q('.dSub').onchange=e=>{d.subtipo=e.target.value;};
   q('.dDet').oninput=e=>d.detalle=e.target.value;
   q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
   q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
@@ -674,12 +699,14 @@ $('add').onclick=()=>addDef();
 function addDer(preCod){
   const pre=preCod?CAT.find(c=>c[0]===preCod):null;
   const id=++defId;
-  const d={id,categoria:pre?pre[2]:'',cant:1,detalle:'',foto:''};
+  const d={id,categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
   S.ders.push(d);
+  const tieneSub=d.categoria&&subtiposDe('der',d.categoria).length>0;
   const el=document.createElement('div');el.className='def';el.style.borderLeftColor='#5b2d9e';
   el.innerHTML=`<button class="rm">×</button>
     <div class="grid">
-      <div class="full"><label>Derivado</label><select class="dCat">${catOptsModo('der',d.categoria)}</select></div>
+      <div class="full"><label>Derivado</label><select class="dCat">${madreOptsModo('der',d.categoria)}</select></div>
+      <div class="full dSubWrap" style="display:${tieneSub?'block':'none'}"><label>Subtipo</label><select class="dSub">${subOptsModo('der',d.categoria,d.subtipo)}</select></div>
       <div><label>Cantidad (sobre lote)</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
       <div><label>Detalle / nota</label><input class="dDet" placeholder="Opcional"></div>
       <div class="full"><label>Foto del derivado (opcional)</label>
@@ -691,7 +718,14 @@ function addDer(preCod){
   const q=s=>el.querySelector(s);
   if(d.categoria) q('.dCat').value=d.categoria;
   q('.rm').onclick=()=>{S.ders=S.ders.filter(x=>x.id!==id);el.remove();recalc();};
-  q('.dCat').onchange=e=>d.categoria=e.target.value;
+  q('.dCat').onchange=e=>{
+    d.categoria=e.target.value; d.subtipo='';
+    const subs=subtiposDe('der',d.categoria);
+    const wrap=q('.dSubWrap');
+    if(subs.length){ wrap.style.display='block'; q('.dSub').innerHTML=subOptsModo('der',d.categoria,''); }
+    else { wrap.style.display='none'; q('.dSub').innerHTML=''; }
+  };
+  q('.dSub').onchange=e=>{d.subtipo=e.target.value;};
   q('.dDet').oninput=e=>d.detalle=e.target.value;
   q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
   q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
@@ -847,8 +881,8 @@ function armarPayload(){
     override:S.override?'SÍ':'NO',override_autoriza:v('ovWho'),override_motivo:v('ovWhy'),
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
     auditor:v('auditor'),
-    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
-    derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
+    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,subtipo:d.subtipo||'',cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
+    derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,subtipo:d.subtipo||'',cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
     fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario'),
     modo: S.editId ? 'actualizar' : 'nuevo',
     edit_id: S.editId || ''
