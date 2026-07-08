@@ -95,6 +95,10 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
   <span id="pendTxt">📥 Tienes auditorías pendientes de enviar</span>
   <button id="pendBtn" style="background:#e9c46a;color:#1f3864;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;white-space:nowrap">Enviar ya</button>
 </div>
+<div id="borradorBar" style="display:none;position:sticky;top:0;z-index:49;background:#2a9d8f;color:#fff;padding:8px 14px;align-items:center;justify-content:space-between;gap:10px;font-size:13px">
+  <span>💾 Continuando tu auditoría en progreso</span>
+  <button id="descartarBorrador" onclick="if(confirm('¿Descartar lo que llevabas y empezar en blanco?')) descartarBorradorYEmpezar();" style="display:none;background:#fff;color:#c32030;border:none;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:12px">Empezar de cero</button>
+</div>
 
 <div class="wrap">
   <!-- MIS AUDITORÍAS (corregir) -->
@@ -652,10 +656,10 @@ function subOptsModo(modo,madre,sel){
   if(!subs.length) return '';
   return '<option value="">— Elegir —</option>'+subs.map(s=>`<option value="${s}" ${s===sel?'selected':''}>${s}</option>`).join('');
 }
-function addDef(preCod){
+function addDef(preCod,datos){
   const pre=preCod?CAT.find(c=>c[0]===preCod):null;
   const id=++defId;
-  const d={id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
+  const d=datos?Object.assign({},datos,{id}):{id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
   S.defs.push(d);
   const tieneSub=d.categoria&&subtiposDe('def',d.categoria).length>0;
   const el=document.createElement('div');el.className='def';
@@ -674,6 +678,11 @@ function addDef(preCod){
   $('defs').appendChild(el);
   const q=s=>el.querySelector(s);
   if(d.categoria) q('.dCat').value=d.categoria;
+  if(datos){
+    q('.dCant').value=d.cant||0;
+    q('.dDet').value=d.detalle||'';
+    if(d.foto){ q('.dPrev').src=d.foto; q('.dPrevWrap').style.display='block'; }
+  }
   q('.rm').onclick=()=>{S.defs=S.defs.filter(x=>x.id!==id);el.remove();recalc();};
   q('.dSec').onchange=e=>{d.seccion=e.target.value;};
   q('.dCat').onchange=e=>{
@@ -696,10 +705,10 @@ function addDef(preCod){
 $('add').onclick=()=>addDef();
 
 /* ===== derivados ===== */
-function addDer(preCod){
+function addDer(preCod,datos){
   const pre=preCod?CAT.find(c=>c[0]===preCod):null;
   const id=++defId;
-  const d={id,categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
+  const d=datos?Object.assign({},datos,{id}):{id,categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
   S.ders.push(d);
   const tieneSub=d.categoria&&subtiposDe('der',d.categoria).length>0;
   const el=document.createElement('div');el.className='def';el.style.borderLeftColor='#5b2d9e';
@@ -717,6 +726,11 @@ function addDer(preCod){
   $('ders').appendChild(el);
   const q=s=>el.querySelector(s);
   if(d.categoria) q('.dCat').value=d.categoria;
+  if(datos){
+    q('.dCant').value=d.cant||0;
+    q('.dDet').value=d.detalle||'';
+    if(d.foto){ q('.dPrev').src=d.foto; q('.dPrevWrap').style.display='block'; }
+  }
   q('.rm').onclick=()=>{S.ders=S.ders.filter(x=>x.id!==id);el.remove();recalc();};
   q('.dCat').onchange=e=>{
     d.categoria=e.target.value; d.subtipo='';
@@ -747,33 +761,73 @@ function buildChips(){
 }
 
 /* ===== foto ===== */
-function shrink(file,cb){
-  const r=new FileReader();
-  r.onload=()=>{
-    const img=new Image();
-    img.onload=()=>{
-      const max=1400,sc=Math.min(1,max/Math.max(img.width,img.height));
-      const cv=document.createElement('canvas');
-      cv.width=img.width*sc; cv.height=img.height*sc;
-      const ctx=cv.getContext('2d');
-      ctx.drawImage(img,0,0,cv.width,cv.height);
-      // ===== filtro tipo escáner: gris + contraste + brillo =====
-      try{
-        const d=ctx.getImageData(0,0,cv.width,cv.height), px=d.data;
-        const contraste=1.35, brillo=12;
-        for(let i=0;i<px.length;i+=4){
-          let g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];   // a gris
-          g=(g-128)*contraste+128+brillo;                  // contraste + brillo
-          g=g<0?0:g>255?255:g;
-          px[i]=px[i+1]=px[i+2]=g;
-        }
-        ctx.putImageData(d,0,0);
-      }catch(e){/* si falla el filtro, queda la foto normal */}
-      cb(cv.toDataURL('image/jpeg',0.75));
-    };
-    img.src=r.result;
+let _heic2anyCargando=null;
+function cargarHeic2any(){
+  if(window.heic2any) return Promise.resolve();
+  if(_heic2anyCargando) return _heic2anyCargando;
+  _heic2anyCargando=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js';
+    s.onload=res; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+  return _heic2anyCargando;
+}
+
+function shrink(file,cb,onerr){
+  const avisarError=(msg)=>{
+    if(onerr) onerr(msg);
+    else toast(msg,'err');
   };
-  r.readAsDataURL(file);
+  const procesarComoImagen=(blobOrFile)=>{
+    const r=new FileReader();
+    r.onerror=()=>avisarError('No se pudo leer la foto. Intenta tomarla con la cámara.');
+    r.onload=()=>{
+      const img=new Image();
+      img.onerror=async()=>{
+        // Posible foto HEIC (típico de iPhone al elegir de galería). Intentar convertir.
+        try{
+          await cargarHeic2any();
+          const conv=await window.heic2any({blob:blobOrFile,toType:'image/jpeg',quality:0.85});
+          procesarComoImagen(conv);
+        }catch(e){
+          avisarError('Esta foto no se pudo procesar (formato no compatible). Prueba tomarla directo con la cámara.');
+        }
+      };
+      img.onload=()=>{
+        const max=1400,sc=Math.min(1,max/Math.max(img.width,img.height));
+        const cv=document.createElement('canvas');
+        cv.width=img.width*sc; cv.height=img.height*sc;
+        const ctx=cv.getContext('2d');
+        ctx.drawImage(img,0,0,cv.width,cv.height);
+        // ===== filtro tipo escáner: gris + contraste + brillo =====
+        try{
+          const d=ctx.getImageData(0,0,cv.width,cv.height), px=d.data;
+          const contraste=1.35, brillo=12;
+          for(let i=0;i<px.length;i+=4){
+            let g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];   // a gris
+            g=(g-128)*contraste+128+brillo;                  // contraste + brillo
+            g=g<0?0:g>255?255:g;
+            px[i]=px[i+1]=px[i+2]=g;
+          }
+          ctx.putImageData(d,0,0);
+        }catch(e){/* si falla el filtro, queda la foto normal */}
+        try{
+          cb(cv.toDataURL('image/jpeg',0.75));
+        }catch(e){
+          avisarError('La foto es muy pesada para procesarla. Prueba con otra o tómala con la cámara.');
+        }
+      };
+      img.src=r.result;
+    };
+    r.readAsDataURL(blobOrFile);
+  };
+  // Aviso de seguridad: si en 15s no pasó nada, informar (evita que quede "colgado" en silencio)
+  let resuelto=false;
+  const cbOrig=cb;
+  cb=(...args)=>{ resuelto=true; cbOrig(...args); };
+  setTimeout(()=>{ if(!resuelto) avisarError('La foto está tardando demasiado. Prueba con otra foto o con la cámara.'); },15000);
+  procesarComoImagen(file);
 }
 
 /* ===== override ===== */
@@ -819,6 +873,7 @@ function validate(){
       av.innerHTML = '⚠️ Falta llenar: <b>' + faltan.join(', ') + '</b>';
     }
   }
+  guardarBorradorDebounced();
 }
 ['po','recibido','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('recibido').addEventListener('input',calcAvance);
@@ -900,6 +955,7 @@ $('save').onclick=async()=>{
     }
     try{
       const data=await enviarUno(payload);
+      borrarBorrador();
       toast('Corrección guardada · '+(data.id||S.editId),'ok');
       setTimeout(()=>location.reload(),2000);
     }catch(err){
@@ -910,7 +966,7 @@ $('save').onclick=async()=>{
   }
   // Si no hay conexión, guardar directo en cola sin intentar
   if(navigator.onLine===false){
-    try{ await colaAdd(payload); await refrescarPend();
+    try{ await colaAdd(payload); await refrescarPend(); borrarBorrador();
       toast('Sin señal. Guardada en el celular. Envíala cuando tengas internet.','err');
       setTimeout(()=>location.reload(),2600);
     }catch(e){ toast('No se pudo guardar localmente: '+e.message,'err'); btn.disabled=false;btn.textContent='Guardar'; }
@@ -918,10 +974,11 @@ $('save').onclick=async()=>{
   }
   try{
     const data=await enviarUno(payload);
+    borrarBorrador();
     toast('Guardada '+data.id+' · '+data.resultado,'ok');setTimeout(()=>location.reload(),2200);
   }catch(err){
     // falló el envío (señal intermitente) -> guardar en cola
-    try{ await colaAdd(payload); await refrescarPend();
+    try{ await colaAdd(payload); await refrescarPend(); borrarBorrador();
       toast('No se pudo enviar. Guardada en el celular para enviar luego.','err');
       setTimeout(()=>location.reload(),2600);
     }catch(e){ toast('No se pudo guardar: '+e.message,'err'); btn.disabled=false;btn.textContent='Guardar'; }
@@ -1044,14 +1101,105 @@ function cargarParaEditar(id){
 
 function cancelarEdicion(){
   S.editId=null;
+  borrarBorrador();
   $('modoEdicion').style.display='none';
   location.reload();  // limpia todo
+}
+function descartarBorradorYEmpezar(){
+  borrarBorrador();
+  location.reload();
 }
 
 $('btnMisAud').onclick=buscarMisAud;
 $('btnCancelEdit').onclick=cancelarEdicion;
 
-loadLists(); cargarAud().then(refrescarCascada); recalc(); refrescarPend().then(async()=>{ if(navigator.onLine){ const n=await colaCount(); if(n>0) enviarPendientes(); } });
+/* =================== BORRADOR AUTOMÁTICO (no perder el trabajo al cambiar de app) =================== */
+const BORRADOR_KEY='ac009_borrador_v1';
+const BORRADOR_MAX_HORAS=18; // no restaurar borradores más viejos que esto
+
+function recolectarBorrador(){
+  const camposTxt=['grupo','estiloL','estiloC','po','color','destino','pedido','recibido','auditor','fecha','taller','medMuestra','medDef','medRes','comentario','ovWho','ovWhy'];
+  const campos={};
+  camposTxt.forEach(id=>{ const el=$(id); if(el) campos[id]=el.value; });
+  const checks={};
+  ['licSwitch','reproSwitch','ovSwitch'].forEach(id=>{ const el=$(id); if(el) checks[id]=el.checked; });
+  return {
+    ts: Date.now(), campos, checks,
+    proceso:S.proceso, nAud:S.nAud, int_ext:S.int_ext, nivel:S.nivel,
+    override:S.override, licencia:S.licencia, reproceso:S.reproceso, editId:S.editId||null,
+    defs:S.defs.map(d=>({seccion:d.seccion,categoria:d.categoria,subtipo:d.subtipo,cant:d.cant,detalle:d.detalle,foto:d.foto})),
+    ders:S.ders.map(d=>({categoria:d.categoria,subtipo:d.subtipo,cant:d.cant,detalle:d.detalle,foto:d.foto})),
+    fotosMed:S.fotosMed, fotosPro:S.fotosPro
+  };
+}
+let _bTimer=null;
+function guardarBorradorAhora(){
+  try{
+    const b=recolectarBorrador();
+    const tieneAlgo=b.campos.grupo||b.campos.po||b.campos.estiloL||b.defs.length||b.ders.length;
+    if(!tieneAlgo){ localStorage.removeItem(BORRADOR_KEY); return; }
+    localStorage.setItem(BORRADOR_KEY, JSON.stringify(b));
+  }catch(e){
+    // Si falla por espacio (fotos pesadas), guardar un respaldo sin fotos para no perder al menos los datos
+    try{
+      const b=recolectarBorrador();
+      b.defs.forEach(d=>d.foto=''); b.ders.forEach(d=>d.foto='');
+      b.fotosMed=[]; b.fotosPro=[];
+      localStorage.setItem(BORRADOR_KEY, JSON.stringify(b));
+    }catch(e2){/* si ni así se puede, no hay más que hacer */}
+  }
+}
+function guardarBorradorDebounced(){ clearTimeout(_bTimer); _bTimer=setTimeout(guardarBorradorAhora,700); }
+function borrarBorrador(){ try{ localStorage.removeItem(BORRADOR_KEY); }catch(e){} }
+
+function restaurarBorrador(){
+  let raw; try{ raw=localStorage.getItem(BORRADOR_KEY); }catch(e){ return; }
+  if(!raw) return;
+  let b; try{ b=JSON.parse(raw); }catch(e){ localStorage.removeItem(BORRADOR_KEY); return; }
+  if(!b||!b.ts) return;
+  if((Date.now()-b.ts)/3600000 > BORRADOR_MAX_HORAS){ localStorage.removeItem(BORRADOR_KEY); return; }
+  const tieneAlgo=(b.campos&&(b.campos.grupo||b.campos.po||b.campos.estiloL))||(b.defs&&b.defs.length)||(b.ders&&b.ders.length);
+  if(!tieneAlgo) return;
+
+  Object.keys(b.campos||{}).forEach(id=>{ const el=$(id); if(el) el.value=b.campos[id]; });
+  Object.keys(b.checks||{}).forEach(id=>{ const el=$(id); if(el) el.checked=b.checks[id]; });
+
+  if(b.proceso){ const selP=$('proceso'); if(selP) selP.value=b.proceso; }
+  S.proceso=b.proceso||''; S.int_ext=b.int_ext||''; S.nAud=b.nAud||''; S.nivel=b.nivel||'1.5';
+  S.override=!!b.override; S.licencia=!!b.licencia; S.reproceso=!!b.reproceso;
+  if(b.editId){ S.editId=b.editId; const ei=$('editId'); if(ei) ei.textContent=b.editId; const me=$('modoEdicion'); if(me) me.style.display='block'; }
+
+  document.querySelectorAll('#segA button').forEach(x=>{ x.classList.toggle('on', x.dataset.v===S.nivel); });
+  if($('ovFields')) $('ovFields').classList.toggle('show', S.override);
+  if($('tallerWrap')) $('tallerWrap').style.display=(S.proceso&&S.int_ext==='EXTERNA')?'block':'none';
+  if(S.proceso&&typeof fillTaller==='function') fillTaller(S.proceso);
+
+  S.fotosMed=b.fotosMed||[]; S.fotosPro=b.fotosPro||[];
+  if(typeof actualizarCardProceso==='function') actualizarCardProceso();
+  pintarFotos('med'); pintarFotos('pro');
+
+  (b.defs||[]).forEach(d=>addDef(null,d));
+  (b.ders||[]).forEach(d=>addDer(null,d));
+
+  if(typeof aplicarCliente==='function') aplicarCliente();
+  recalc();
+  if(typeof calcAvance==='function') calcAvance();
+
+  toast('Se restauró tu auditoría en progreso · '+(S.editId?'(corrección)':'nueva'),'ok');
+  const bb=$('borradorBar'); if(bb) bb.style.display='flex';
+  const dv=$('descartarBorrador'); if(dv) dv.style.display='inline-block';
+}
+
+// Guardar de inmediato al salir/ocultar la app (clave para "cambiar de app y volver")
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) guardarBorradorAhora(); });
+window.addEventListener('pagehide', guardarBorradorAhora);
+
+Promise.all([loadLists(), cargarAud()]).then(()=>{
+  refrescarCascada();
+  restaurarBorrador();
+  recalc();
+});
+refrescarPend().then(async()=>{ if(navigator.onLine){ const n=await colaCount(); if(n>0) enviarPendientes(); } });
 </script>
 </body>
 </html>
