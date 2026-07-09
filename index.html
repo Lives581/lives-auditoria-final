@@ -171,6 +171,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
     </div>
     <div class="grid">
       <div><label>Grupo *</label><input id="grupo" list="grupos" autocomplete="off" placeholder="EFI-102">
+        <div class="hint">Escribe las 3 letras y el número: el "-" sale solo (ej. EFI102 → EFI-102).</div>
         <datalist id="grupos"></datalist></div>
       <div class="full"><label>Cliente (automático)</label>
         <input id="cliente" readonly placeholder="Se completa según el grupo" style="background:#eef3f1;font-weight:600;color:var(--green)">
@@ -537,6 +538,20 @@ function maskMedidas(e){
     val=val.substring(0,2);                        // máximo 2 dígitos
     e.target.value = val.length===1 ? val+'/' : val[0]+'/'+val[1];
   } else { e.target.value=''; }
+}
+
+// Grupo: mayúsculas + guión automático después de las primeras 3 letras (ej. "pak109" -> "PAK-109")
+function maskGrupo(e){
+  const el=e.target;
+  const posOriginal=el.selectionStart;
+  const raw=el.value.toUpperCase().replace(/-/g,'');   // mayúsculas, sin guiones (se reinserta solo)
+  let nuevo=raw;
+  if(raw.length>3){ nuevo=raw.substring(0,3)+'-'+raw.substring(3); }
+  el.value=nuevo;
+  // mantener el cursor en un lugar razonable (sumar 1 si el guión quedó antes de la posición original)
+  let nuevaPos=posOriginal;
+  if(nuevo.length>raw.length && posOriginal>3) nuevaPos=posOriginal+1;
+  try{ el.setSelectionRange(nuevaPos,nuevaPos); }catch(err){}
 }
 
 /* ===== Pedido: autocompletar + bloquear según lote previo ===== */
@@ -946,6 +961,7 @@ function validate(){
   }
   guardarBorradorDebounced();
 }
+$('grupo').addEventListener('input',maskGrupo);
 ['po','recibido','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('recibido').addEventListener('input',calcAvance);
 $('pedido').addEventListener('input',calcAvance);
@@ -1069,7 +1085,7 @@ function upperOf(id){
     try{el.setSelectionRange(p,p);}catch(e){}
   });
 }
-['grupo','estiloL','estiloC','po','color','destino','auditor','comentario','ovWho','ovWhy'].forEach(upperOf);
+['estiloL','estiloC','po','color','destino','auditor','comentario','ovWho','ovWhy'].forEach(upperOf);
 
 /* init */
 $('fecha').valueAsDate=new Date();
