@@ -40,6 +40,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
 .chip:active{background:var(--navy);color:#fff}
 .def{border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:12px;margin-bottom:10px;background:#fcfdfe;position:relative}
 .subList{margin-top:10px;border-top:1px solid var(--line)}
+.seccionTitulo{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:1px;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.seccionTitulo:first-child{margin-top:0}
 .catRow{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;background:#fff}
 .catRow.tieneDatos{border-color:var(--green);border-width:2px}
 .catHead{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -228,9 +230,6 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
   <div class="card">
     <div class="sec"><span class="dot"></span>Defectos de calidad</div>
     <div class="hint" style="margin:-6px 0 10px">Sobre la muestra. Cuentan para el AQL. Toca las categorías que apliquen y pon la cantidad.</div>
-    <div class="field"><label>Sección de los defectos</label>
-      <div class="seg" id="defSeccionSeg"><button data-v="Costura" class="on">Costura</button><button data-v="Acabados">Acabados</button></div>
-    </div>
     <div id="defChecklist"></div>
     <div class="total-def"><span>Total de defectos</span><b id="totDef">0</b></div>
   </div>
@@ -606,7 +605,7 @@ function fillTaller(proc){
 }
 
 /* ===== ESTADO ===== */
-const S={nAud:'',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false,reproceso:false,fotosMed:[],fotosPro:[],defSeccion:'Costura'};
+const S={nAud:'',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false,reproceso:false,fotosMed:[],fotosPro:[]};
 let AUD_CACHE=null;       // filas de la hoja AUDITORÍAS (para ordinal/pedido/panel)
 let ordTimer=null;
 let defId=0;
@@ -631,16 +630,6 @@ $('proceso').onchange=()=>{
   const esCostura = S.proceso==='Costura (taller)';
   const poLabel=$('poLabel'); if(poLabel) poLabel.textContent = esCostura ? 'PO' : 'PO *';
   const poHint=$('poHint'); if(poHint) poHint.style.display = esCostura ? 'block' : 'none';
-  // Sincronizar la sección del checklist de defectos con el proceso elegido (Costura->Costura, Acabados/Interno->Acabados)
-  const seccionSugerida = esCostura ? 'Costura' : 'Acabados';
-  if(S.proceso && seccionSugerida!==S.defSeccion){
-    const tieneDatos=(S.defs||[]).some(b=>totalBloque(b)>0);
-    if(!tieneDatos || confirm('Cambiaste de proceso. ¿Actualizar la lista de defectos a la sección "'+seccionSugerida+'"? Se borrarán las cantidades puestas.')){
-      S.defSeccion=seccionSugerida;
-      document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.toggle('on', x.dataset.v===seccionSugerida));
-      generarChecklistDefectos(seccionSugerida);
-    }
-  }
   fillTaller(S.proceso);
   actualizarCardProceso();
   pedirOrdinal(); validate();
@@ -788,10 +777,18 @@ function crearBloqueCategoria(seccion,madre){
   return { categoria:madre, seccion, detalle:'', cant:0, foto:'', subs:subs.map(s=>({subtipo:s,cant:0,foto:''})) };
 }
 
-// Genera el checklist completo de DEFECTOS para la sección elegida (reemplaza S.defs)
-function generarChecklistDefectos(seccion){
-  S.defs = madresPorSeccion(seccion).map(m=>crearBloqueCategoria(seccion,m));
-  pintarChecklist($('defChecklist'),S.defs);
+// Genera el checklist completo de DEFECTOS combinando Costura Y Acabados a la vez (una auditoría puede tener de ambas)
+function generarChecklistDefectos(){
+  const costura=madresPorSeccion('Costura').map(m=>crearBloqueCategoria('Costura',m));
+  const acabados=madresPorSeccion('Acabados').map(m=>crearBloqueCategoria('Acabados',m));
+  S.defs = costura.concat(acabados);
+  repintarChecklistDefectos();
+}
+// Vuelve a pintar S.defs respetando la agrupación visual por sección (Costura/Acabados). Útil tras sobreponer valores guardados.
+function repintarChecklistDefectos(){
+  const costura=S.defs.filter(b=>b.seccion==='Costura');
+  const acabados=S.defs.filter(b=>b.seccion==='Acabados');
+  pintarChecklistConSecciones($('defChecklist'), [['Costura',costura],['Acabados',acabados]]);
 }
 // Genera el checklist completo de DERIVADOS (siempre sección "Derivados", una sola vez)
 function generarChecklistDerivados(){
@@ -804,6 +801,17 @@ function pintarChecklist(cont,bloques){
   if(!cont) return;
   cont.innerHTML='';
   bloques.forEach(b=>cont.appendChild(crearFilaCategoria(b)));
+}
+// Igual, pero agrupado bajo encabezados de sección (ej. "COSTURA" / "ACABADOS"), ambos siempre visibles y editables a la vez
+function pintarChecklistConSecciones(cont,grupos){
+  if(!cont) return;
+  cont.innerHTML='';
+  grupos.forEach(([nombre,bloques])=>{
+    if(!bloques.length) return;
+    const tit=document.createElement('div'); tit.className='seccionTitulo'; tit.textContent=nombre.toUpperCase();
+    cont.appendChild(tit);
+    bloques.forEach(b=>cont.appendChild(crearFilaCategoria(b)));
+  });
 }
 
 function crearFilaCategoria(b){
@@ -845,21 +853,6 @@ $('camGlobal').onchange=e=>{
   const {target,btnEl}=_camTarget;
   shrink(f,b64=>{ target.foto=b64; pintarBotonCam(btnEl,b64); recalc(); }, null, false);
 };
-
-/* ===== selector de Sección para Defectos (manejo manual: necesita confirmar antes de perder datos) ===== */
-document.querySelectorAll('#defSeccionSeg button').forEach(btn=>{
-  btn.onclick=()=>{
-    const nuevo=btn.dataset.v;
-    if(nuevo===S.defSeccion) return;
-    const tieneDatos=(S.defs||[]).some(b=>totalBloque(b)>0);
-    if(tieneDatos && !confirm('Si cambias la sección se borrarán las cantidades que ya pusiste en Defectos. ¿Continuar?')) return;
-    document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.remove('on'));
-    btn.classList.add('on');
-    S.defSeccion=nuevo;
-    generarChecklistDefectos(S.defSeccion);
-    recalc();
-  };
-});
 
 /* ===== foto: cámara directa, con manejo de errores ===== */
 function shrink(file,cb,onerr,escaner){
@@ -1167,11 +1160,7 @@ function cargarParaEditar(id){
   S.int_ext = (norm(proc).indexOf('interno')>=0) ? 'INTERNA' : (proc?'EXTERNA':'');
   // mostrar/ocultar bloque de licencia según el proceso (solo aplica a Auditoría Final interno)
   const licWrap=$('licWrap'); if(licWrap) licWrap.style.display=(norm(proc).indexOf('interno')>=0)?'flex':'none';
-  // sincronizar la sección del checklist de defectos con el proceso de esta auditoría
-  const seccionDef = (proc==='Costura (taller)') ? 'Costura' : 'Acabados';
-  S.defSeccion=seccionDef;
-  document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.toggle('on', x.dataset.v===seccionDef));
-  generarChecklistDefectos(seccionDef);
+  generarChecklistDefectos();
   // medidas
   $('medMuestra').value=r[28]||''; $('medDef').value=r[29]||''; $('medRes').value=r[30]||'';
   // comentario
@@ -1219,7 +1208,7 @@ function recolectarBorrador(){
   ['licSwitch','reproSwitch','ovSwitch'].forEach(id=>{ const el=$(id); if(el) checks[id]=el.checked; });
   return {
     ts: Date.now(), campos, checks,
-    proceso:S.proceso, nAud:S.nAud, int_ext:S.int_ext, nivel:S.nivel, defSeccion:S.defSeccion,
+    proceso:S.proceso, nAud:S.nAud, int_ext:S.int_ext, nivel:S.nivel,
     override:S.override, licencia:S.licencia, reproceso:S.reproceso, editId:S.editId||null,
     defs:S.defs.map(b=>({seccion:b.seccion,categoria:b.categoria,detalle:b.detalle,cant:b.cant,foto:b.foto,subs:(b.subs||[]).map(s=>({subtipo:s.subtipo,cant:s.cant,foto:s.foto}))})),
     ders:S.ders.map(b=>({categoria:b.categoria,detalle:b.detalle,cant:b.cant,foto:b.foto,subs:(b.subs||[]).map(s=>({subtipo:s.subtipo,cant:s.cant,foto:s.foto}))})),
@@ -1258,7 +1247,8 @@ function borrarBorrador(){ _borradorBloqueado=true; try{ localStorage.removeItem
 function aplicarValoresGuardados(actual,guardado){
   if(!guardado||!guardado.length) return;
   guardado.forEach(g=>{
-    const b=actual.find(x=>x.categoria===g.categoria);
+    // Emparejar por categoría + sección (una misma categoría, ej. "Manchas", puede existir en Costura Y en Acabados)
+    const b=actual.find(x=>x.categoria===g.categoria && (!g.seccion || x.seccion===g.seccion));
     if(!b) return;
     b.detalle=g.detalle||'';
     if(g.subs&&g.subs.length&&b.subs.length){
@@ -1301,14 +1291,10 @@ function restaurarBorrador(){
   if(typeof actualizarCardProceso==='function') actualizarCardProceso();
   pintarFotos('med'); pintarFotos('pro');
 
-  // Defectos: regenerar el checklist de la sección guardada y sobreponer las cantidades/fotos guardadas
-  if(b.defSeccion){
-    S.defSeccion=b.defSeccion;
-    document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.toggle('on', x.dataset.v===S.defSeccion));
-  }
-  generarChecklistDefectos(S.defSeccion);
+  // Defectos: regenerar el checklist completo (Costura+Acabados) y sobreponer las cantidades/fotos guardadas
+  generarChecklistDefectos();
   aplicarValoresGuardados(S.defs, b.defs);
-  pintarChecklist($('defChecklist'),S.defs);
+  repintarChecklistDefectos();
 
   // Derivados: mismo mecanismo (una sola sección fija)
   generarChecklistDerivados();
@@ -1330,7 +1316,7 @@ window.addEventListener('pagehide', guardarBorradorAhora);
 
 Promise.all([loadLists(), cargarAud()]).then(()=>{
   refrescarCascada();
-  generarChecklistDefectos(S.defSeccion);
+  generarChecklistDefectos();
   generarChecklistDerivados();
   restaurarBorrador();
   recalc();
