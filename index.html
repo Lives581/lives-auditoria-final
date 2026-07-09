@@ -39,6 +39,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
 .chip{border:1px dashed var(--navy);color:var(--navy);background:#fff;border-radius:20px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer}
 .chip:active{background:var(--navy);color:#fff}
 .def{border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:12px;margin-bottom:10px;background:#fcfdfe;position:relative}
+.subList{margin-top:10px;border-top:1px solid var(--line)}
+.catRow{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;background:#fff}
+.catRow.tieneDatos{border-color:var(--green);border-width:2px}
+.catHead{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.catName{flex:1;font-size:14px;font-weight:600;color:var(--ink)}
+.catBadge{background:var(--green);color:#fff;font-size:12px;font-weight:700;border-radius:20px;padding:2px 9px;flex-shrink:0}
+.catArrow{color:var(--muted);font-size:13px;flex-shrink:0;width:14px;text-align:center}
+.catBody{padding:0 14px 12px 14px;display:none}
+.catBody .subList{margin-top:0;border-top:none}
+.subRow{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px dashed var(--line)}
+.subRow:last-child{border-bottom:none}
+.subLabel{flex:1;font-size:13px;color:var(--ink);line-height:1.3}
+.subRow .qty{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.subRow .qty button{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:15px;cursor:pointer;line-height:1}
+.subRow .qty input{width:36px;text-align:center;border:1px solid var(--line);border-radius:6px;padding:4px 2px;font-size:13px}
+.camBtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:0}
+.camBtn.has{border-color:var(--green);border-width:2px}
+.camBtn img{width:100%;height:100%;object-fit:cover;display:block}
 .def .rm{position:absolute;top:8px;right:8px;border:none;background:#f1f3f6;color:var(--muted);width:28px;height:28px;border-radius:7px;font-size:16px;cursor:pointer}
 .qty{display:flex;align-items:center}
 .qty button{width:42px;height:44px;border:1px solid var(--line);background:#fff;font-size:20px;font-weight:700;color:var(--navy);cursor:pointer}
@@ -109,6 +127,10 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
       <div class="full"><label>Mi nombre</label><input id="miNombre" list="auditoras2" autocomplete="off" placeholder="Escribe tu nombre">
         <datalist id="auditoras2"></datalist></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--muted);cursor:pointer">
+      <input type="checkbox" id="soloSinPO" style="width:16px;height:16px">
+      Solo auditorías <b>sin PO</b> (para completarlo cuando ya lo tengan)
+    </label>
     <button class="addbtn" id="btnMisAud" style="margin-top:8px">🔍 Ver mis auditorías recientes</button>
     <div id="misAudList" style="margin-top:10px"></div>
     <div id="modoEdicion" style="display:none;margin-top:10px;padding:10px 12px;background:#fff4e0;border:1px solid #e9c46a;border-radius:10px;font-size:13px;color:#7a5a12">
@@ -153,7 +175,8 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
         <div class="hint" id="cliHint">Escribe el grupo y el cliente aparece solo.</div></div>
       <div><label>Estilo LIVES</label><input id="estiloL" list="dlEstilo" autocomplete="off" placeholder="24647">
         <datalist id="dlEstilo"></datalist></div>
-      <div><label>PO *</label><input id="po" list="dlPo" autocomplete="off" placeholder="6002469 o con letras">
+      <div><label id="poLabel">PO *</label><input id="po" list="dlPo" autocomplete="off" placeholder="6002469 o con letras">
+        <div class="hint" id="poHint" style="display:none">En Costura, si aún no tienen el PO, pueden dejarlo vacío y completarlo después en "Mis auditorías".</div>
         <datalist id="dlPo"></datalist></div>
       <div><label>Color</label><input id="color" list="dlColor" autocomplete="off" placeholder="White">
         <datalist id="dlColor"></datalist></div>
@@ -185,7 +208,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
   <!-- AQL -->
   <div class="card">
     <div class="sec"><span class="dot"></span>Nivel AQL · muestreo</div>
-    <div class="toggle lic">
+    <div class="toggle lic" id="licWrap" style="display:none">
       <div><div style="font-weight:600;font-size:14px">¿Es licencia? (inspección 100%)</div>
         <div class="hint" style="margin-top:2px">La muestra pasa a ser el total recibido y el lote queda aprobado.</div></div>
       <label class="switch"><input type="checkbox" id="licSwitch"><span class="slider"></span></label>
@@ -204,20 +227,19 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
   <!-- DEFECTOS -->
   <div class="card">
     <div class="sec"><span class="dot"></span>Defectos de calidad</div>
-    <div class="hint" style="margin:-6px 0 10px">Sobre la muestra. Cuentan para el AQL.</div>
-    <div class="chips" id="chips"></div>
-    <div id="defs"></div>
-    <button class="addbtn" id="add">+ Agregar defecto</button>
+    <div class="hint" style="margin:-6px 0 10px">Sobre la muestra. Cuentan para el AQL. Toca las categorías que apliquen y pon la cantidad.</div>
+    <div class="field"><label>Sección de los defectos</label>
+      <div class="seg" id="defSeccionSeg"><button data-v="Costura" class="on">Costura</button><button data-v="Acabados">Acabados</button></div>
+    </div>
+    <div id="defChecklist"></div>
     <div class="total-def"><span>Total de defectos</span><b id="totDef">0</b></div>
   </div>
 
   <!-- DERIVADOS -->
   <div class="card">
     <div class="sec"><span class="dot"></span>Derivados</div>
-    <div class="hint" style="margin:-6px 0 10px">Sobre el lote recibido. NO cuentan para el AQL. Opcional.</div>
-    <div class="chips" id="chipsDer"></div>
-    <div id="ders"></div>
-    <button class="addbtn" id="addDer">+ Agregar derivado</button>
+    <div class="hint" style="margin:-6px 0 10px">Sobre el lote recibido. NO cuentan para el AQL. Opcional. Toca las categorías que apliquen.</div>
+    <div id="derChecklist"></div>
     <div class="total-def"><span>Total de derivados</span><b id="totDer">0</b></div>
   </div>
 
@@ -282,6 +304,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
 <div id="faltanBox" style="display:none;background:#fdf5e3;border-top:1px solid #e9c46a;color:#7a5a12;font-size:12.5px;padding:8px 14px;text-align:center"></div>
 </div>
 <div class="toast" id="toast"></div>
+<input type="file" accept="image/*" capture="environment" id="camGlobal" hidden>
 
 <script>
 /* ===== CONFIG: reemplaza ambos al desplegar ===== */
@@ -333,8 +356,10 @@ function llaveFila(r){
   // r = fila de AUDITORÍAS (array). idx: H=7 grupo, I=8 estLives, J=9 estCli, K=10 po, L=11 color, D=3 proceso
   return [norm(r[7]),norm(r[8]),norm(r[9]),norm(r[11]),norm(r[10])].join('|');
 }
+function poEsOpcional(){ return S.proceso==='Costura (taller)'; }
 function loteCompleto(){
-  return $('grupo').value&&$('estiloL').value&&$('estiloC').value&&$('color').value&&$('po').value&&S.proceso;
+  const poOK = poEsOpcional() ? true : !!$('po').value;
+  return $('grupo').value&&$('estiloL').value&&$('estiloC').value&&$('color').value&&poOK&&S.proceso;
 }
 function ordinalTexto(n){
   const t={1:'1ra',2:'2da',3:'3ra'}; return t[n]||(n+'ta');
@@ -424,7 +449,7 @@ function agregarFotos(files,cual){
   let pend=lista.length;
   lista.forEach(f=>{
     if(arr.length>=MAX_FOTOS){pend--; if(pend<=0){pintarFotos(cual);validate();} return;}
-    shrink(f,b64=>{ if(arr.length<MAX_FOTOS) arr.push(b64); pend--; if(pend<=0){pintarFotos(cual);validate();} });
+    shrink(f,b64=>{ if(arr.length<MAX_FOTOS) arr.push(b64); pend--; if(pend<=0){pintarFotos(cual);validate();} }, null, true);
   });
 }
 // ¿el proceso actual requiere foto de proceso? (solo Costura taller)
@@ -557,7 +582,6 @@ async function loadLists(){
     CLIENTES=rows.filter(r=>r[0]&&r[0].toUpperCase()!=='PREFIJO'&&r[1])
                  .map(r=>[r[0].trim().toUpperCase(), r[1].trim()]);
   }catch(e){/* si falla, cliente queda manual-vacío */}
-  buildChips();
 }
 
 /* ===== cliente automático desde el prefijo del grupo ===== */
@@ -582,7 +606,7 @@ function fillTaller(proc){
 }
 
 /* ===== ESTADO ===== */
-const S={nAud:'',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false,reproceso:false,fotosMed:[],fotosPro:[]};
+const S={nAud:'',proceso:'',int_ext:'',nivel:'1.5',defs:[],ders:[],override:false,licencia:false,reproceso:false,fotosMed:[],fotosPro:[],defSeccion:'Costura'};
 let AUD_CACHE=null;       // filas de la hoja AUDITORÍAS (para ordinal/pedido/panel)
 let ordTimer=null;
 let defId=0;
@@ -599,6 +623,24 @@ $('proceso').onchange=()=>{
   const interno=S.proceso==='Acabados Final (interno)';
   S.int_ext=S.proceso?(interno?'INTERNA':'EXTERNA'):'';
   $('tallerWrap').style.display=(S.proceso&&!interno)?'block':'none';
+  // Licencia (inspección 100%) SOLO aplica a Auditoría Final (interno). En talleres (Costura/Acabados) no existe esa opción.
+  const licWrap=$('licWrap');
+  if(licWrap) licWrap.style.display = interno ? 'flex' : 'none';
+  if(!interno && S.licencia){ S.licencia=false; if($('licSwitch')) $('licSwitch').checked=false; }
+  // PO opcional solo en Costura (taller): actualizar el asterisco y el aviso
+  const esCostura = S.proceso==='Costura (taller)';
+  const poLabel=$('poLabel'); if(poLabel) poLabel.textContent = esCostura ? 'PO' : 'PO *';
+  const poHint=$('poHint'); if(poHint) poHint.style.display = esCostura ? 'block' : 'none';
+  // Sincronizar la sección del checklist de defectos con el proceso elegido (Costura->Costura, Acabados/Interno->Acabados)
+  const seccionSugerida = esCostura ? 'Costura' : 'Acabados';
+  if(S.proceso && seccionSugerida!==S.defSeccion){
+    const tieneDatos=(S.defs||[]).some(b=>totalBloque(b)>0);
+    if(!tieneDatos || confirm('Cambiaste de proceso. ¿Actualizar la lista de defectos a la sección "'+seccionSugerida+'"? Se borrarán las cantidades puestas.')){
+      S.defSeccion=seccionSugerida;
+      document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.toggle('on', x.dataset.v===seccionSugerida));
+      generarChecklistDefectos(seccionSugerida);
+    }
+  }
   fillTaller(S.proceso);
   actualizarCardProceso();
   pedirOrdinal(); validate();
@@ -617,14 +659,35 @@ $('licSwitch').onchange=()=>{S.licencia=$('licSwitch').checked;
   recalc();};
 
 /* ===== AQL en vivo ===== */
+// Suma la cantidad total de un bloque (con subtipos o sin ellos)
+function totalBloque(b){
+  return (b.subs&&b.subs.length) ? b.subs.reduce((s,x)=>s+(parseInt(x.cant)||0),0) : (parseInt(b.cant)||0);
+}
+// Convierte los bloques (categoría + checklist de subtipos) en filas planas, solo las que tienen cantidad>0
+function expandirBloques(bloques,seccionFija){
+  const out=[];
+  (bloques||[]).forEach(b=>{
+    if(!b.categoria) return;
+    if(b.subs&&b.subs.length){
+      b.subs.forEach(s=>{
+        if((parseInt(s.cant)||0)>0){
+          out.push({seccion:seccionFija||b.seccion,categoria:b.categoria,subtipo:s.subtipo,cantidad:s.cant,detalle:b.detalle||'',foto_base64:s.foto||''});
+        }
+      });
+    } else if((parseInt(b.cant)||0)>0){
+      out.push({seccion:seccionFija||b.seccion,categoria:b.categoria,subtipo:'',cantidad:b.cant,detalle:b.detalle||'',foto_base64:b.foto||''});
+    }
+  });
+  return out;
+}
 function recalc(){
   const lote=parseInt($('recibido').value)||0, lic=S.licencia;
   let muestra='—',acepta='—',rechaza='—',acceptNum=null;
   if(lic&&lote){muestra=lote;acepta='100%';rechaza='—';acceptNum=lote;}
   else{const q=aqlFor(lote,S.nivel); if(q){muestra=q.muestra;acepta=q.acepta;rechaza=q.rechaza;acceptNum=q.acepta;}}
   $('aLote').textContent=lote||'—'; $('aMuestra').textContent=muestra; $('aAcepta').textContent=acepta; $('aRechaza').textContent=rechaza;
-  const tot=S.defs.reduce((s,d)=>s+(parseInt(d.cant)||0),0); $('totDef').textContent=tot;
-  const totD=S.ders.reduce((s,d)=>s+(parseInt(d.cant)||0),0); const td=$('totDer'); if(td)td.textContent=totD;
+  const tot=S.defs.reduce((s,b)=>s+totalBloque(b),0); $('totDef').textContent=tot;
+  const totD=S.ders.reduce((s,b)=>s+totalBloque(b),0); const td=$('totDer'); if(td)td.textContent=totD;
   const v=$('verdict'),vt=$('vText'),ov=$('ovCard'); v.className='verdict';
   if(!lote){vt.textContent='—';ov.classList.remove('show');}
   else if(lic){v.classList.add('ap');vt.textContent='APROBADO (LICENCIA)';ov.classList.remove('show');resetOv();}
@@ -635,8 +698,22 @@ function recalc(){
 function resetOv(){S.override=false;$('ovSwitch').checked=false;$('ovFields').classList.remove('show');}
 
 /* ===== defectos ===== */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function catItems(modo){ // modo: 'def' = Acabados+Costura ; 'der' = Derivados
   return CAT.filter(c=> modo==='der' ? c[1]==='Derivados' : (c[1]==='Acabados'||c[1]==='Costura'));
+}
+// Categorías madre para una SECCIÓN exacta (Costura / Acabados / Derivados)
+function madresPorSeccion(seccion){
+  const vistos=new Set(), out=[];
+  CAT.filter(c=>c[1]===seccion).forEach(c=>{ if(!vistos.has(c[2])){ vistos.add(c[2]); out.push(c[2]); } });
+  return out;
+}
+function madreOptsSeccion(seccion,sel){
+  return '<option value="">— Elegir categoría —</option>'+madresPorSeccion(seccion).map(m=>`<option value="${esc(m)}" ${m===sel?'selected':''}>${esc(m)}</option>`).join('');
+}
+// Subtipos de una categoría dentro de una sección exacta
+function subtiposDeSeccion(seccion,madre){
+  return CAT.filter(c=>c[1]===seccion && c[2]===madre && c[3]).map(c=>c[3]);
 }
 // Lista de categorías MADRE únicas (sin repetir), en orden de aparición
 function madresUnicas(modo){
@@ -656,112 +733,139 @@ function subOptsModo(modo,madre,sel){
   if(!subs.length) return '';
   return '<option value="">— Elegir —</option>'+subs.map(s=>`<option value="${s}" ${s===sel?'selected':''}>${s}</option>`).join('');
 }
-function addDef(preCod,datos){
-  const pre=preCod?CAT.find(c=>c[0]===preCod):null;
-  const id=++defId;
-  const d=datos?Object.assign({},datos,{id}):{id,seccion:pre?pre[1]:'Costura',categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
-  S.defs.push(d);
-  const tieneSub=d.categoria&&subtiposDe('def',d.categoria).length>0;
-  const el=document.createElement('div');el.className='def';
-  el.innerHTML=`<button class="rm">×</button>
-    <div class="grid">
-      <div><label>Sección</label><select class="dSec"><option ${d.seccion==='Acabados'?'selected':''}>Acabados</option><option ${d.seccion==='Costura'?'selected':''}>Costura</option></select></div>
-      <div><label>Cantidad</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
-      <div class="full"><label>Categoría</label><select class="dCat">${madreOptsModo('def',d.categoria)}</select></div>
-      <div class="full dSubWrap" style="display:${tieneSub?'block':'none'}"><label>Subtipo</label><select class="dSub">${subOptsModo('def',d.categoria,d.subtipo)}</select></div>
-      <div class="full"><label>Detalle / nota</label><input class="dDet" placeholder="Ej. hilo contaminado negro"></div>
-      <div class="full"><label>Foto del defecto (opcional)</label>
-        <label class="btn" style="display:inline-block">📷 Tomar foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label>
-        <div class="dPrevWrap" style="display:none;margin-top:8px"><div class="fotoItem" style="max-width:120px"><img class="dPrev"><button type="button" class="dDel del">×</button></div></div>
-      </div>
-    </div>`;
-  $('defs').appendChild(el);
-  const q=s=>el.querySelector(s);
-  if(d.categoria) q('.dCat').value=d.categoria;
-  if(datos){
-    q('.dCant').value=d.cant||0;
-    q('.dDet').value=d.detalle||'';
-    if(d.foto){ q('.dPrev').src=d.foto; q('.dPrevWrap').style.display='block'; }
-  }
-  q('.rm').onclick=()=>{S.defs=S.defs.filter(x=>x.id!==id);el.remove();recalc();};
-  q('.dSec').onchange=e=>{d.seccion=e.target.value;};
-  q('.dCat').onchange=e=>{
-    d.categoria=e.target.value; d.subtipo='';
-    const f=CAT.find(c=>c[2]===d.categoria); if(f)d.seccion=f[1]; q('.dSec').value=(f&&f[1]==='Acabados')?'Acabados':'Costura';
-    const subs=subtiposDe('def',d.categoria);
-    const wrap=q('.dSubWrap');
-    if(subs.length){ wrap.style.display='block'; q('.dSub').innerHTML=subOptsModo('def',d.categoria,''); }
-    else { wrap.style.display='none'; q('.dSub').innerHTML=''; }
-  };
-  q('.dSub').onchange=e=>{d.subtipo=e.target.value;};
-  q('.dDet').oninput=e=>d.detalle=e.target.value;
-  q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
-  q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
-  q('.dCant').oninput=e=>{d.cant=parseInt(e.target.value)||0;recalc();};
-  q('.dFoto').onchange=e=>{const f=e.target.files[0];if(!f)return;shrink(f,b64=>{d.foto=b64;q('.dPrev').src=b64;q('.dPrevWrap').style.display='block';});};
-  q('.dDel').onclick=()=>{d.foto='';q('.dPrevWrap').style.display='none';q('.dFoto').value='';};
-  recalc();
+/* ===== Cámara compartida para filas de defectos/derivados (una sola, evita crear N inputs) ===== */
+let _camTarget=null;
+function abrirCamaraPara(target,btnEl){
+  _camTarget={target,btnEl};
+  $('camGlobal').click();
 }
-$('add').onclick=()=>addDef();
+function pintarBotonCam(btnEl,b64){
+  btnEl.classList.add('has');
+  btnEl.innerHTML = b64 ? `<img src="${b64}">` : '📷';
+}
 
-/* ===== derivados ===== */
-function addDer(preCod,datos){
-  const pre=preCod?CAT.find(c=>c[0]===preCod):null;
-  const id=++defId;
-  const d=datos?Object.assign({},datos,{id}):{id,categoria:pre?pre[2]:'',subtipo:pre?(pre[3]||''):'',cant:1,detalle:'',foto:''};
-  S.ders.push(d);
-  const tieneSub=d.categoria&&subtiposDe('der',d.categoria).length>0;
-  const el=document.createElement('div');el.className='def';el.style.borderLeftColor='#5b2d9e';
-  el.innerHTML=`<button class="rm">×</button>
-    <div class="grid">
-      <div class="full"><label>Derivado</label><select class="dCat">${madreOptsModo('der',d.categoria)}</select></div>
-      <div class="full dSubWrap" style="display:${tieneSub?'block':'none'}"><label>Subtipo</label><select class="dSub">${subOptsModo('der',d.categoria,d.subtipo)}</select></div>
-      <div><label>Cantidad (sobre lote)</label><div class="qty"><button type="button" class="qM">–</button><input class="dCant" inputmode="numeric" value="1"><button type="button" class="qP">+</button></div></div>
-      <div><label>Detalle / nota</label><input class="dDet" placeholder="Opcional"></div>
-      <div class="full"><label>Foto del derivado (opcional)</label>
-        <label class="btn" style="display:inline-block">📷 Tomar foto<input type="file" accept="image/*" capture="environment" class="dFoto" hidden></label>
-        <div class="dPrevWrap" style="display:none;margin-top:8px"><div class="fotoItem" style="max-width:120px"><img class="dPrev"><button type="button" class="dDel del">×</button></div></div>
-      </div>
-    </div>`;
-  $('ders').appendChild(el);
-  const q=s=>el.querySelector(s);
-  if(d.categoria) q('.dCat').value=d.categoria;
-  if(datos){
-    q('.dCant').value=d.cant||0;
-    q('.dDet').value=d.detalle||'';
-    if(d.foto){ q('.dPrev').src=d.foto; q('.dPrevWrap').style.display='block'; }
+function filaSubHTML(label,cant,foto,idx){
+  const camContent = foto ? `<img src="${foto}">` : '📷';
+  return `<div class="subRow" data-idx="${idx}">
+    <span class="subLabel">${esc(label)}</span>
+    <div class="qty"><button type="button" class="qM">–</button><input class="qVal" inputmode="numeric" value="${cant||0}"><button type="button" class="qP">+</button></div>
+    <button type="button" class="camBtn ${foto?'has':''}">${camContent}</button>
+  </div>`;
+}
+function bindSubRows(cont,b){
+  cont.querySelectorAll('.subRow').forEach(row=>{
+    const idx=parseInt(row.dataset.idx);
+    const target = idx===-1 ? b : b.subs[idx];
+    const qVal=row.querySelector('.qVal'), qM=row.querySelector('.qM'), qP=row.querySelector('.qP'), camBtn=row.querySelector('.camBtn');
+    qM.onclick=()=>{ target.cant=Math.max(0,(parseInt(target.cant)||0)-1); qVal.value=target.cant; recalc(); };
+    qP.onclick=()=>{ target.cant=(parseInt(target.cant)||0)+1; qVal.value=target.cant; recalc(); };
+    qVal.oninput=e=>{ target.cant=parseInt(e.target.value)||0; recalc(); };
+    camBtn.onclick=()=>abrirCamaraPara(target,camBtn);
+  });
+}
+// Dibuja el checklist de cantidades para el bloque b, según su categoría (con o sin subtipos)
+function renderChecklist(cont,b,seccion){
+  if(!b.categoria){ cont.innerHTML=''; b.subs=[]; return; }
+  const subs=subtiposDeSeccion(seccion,b.categoria);
+  if(!subs.length){
+    b.subs=[];
+    if(typeof b.cant!=='number') b.cant=0;
+    cont.innerHTML=filaSubHTML('Cantidad',b.cant,b.foto,-1);
+  } else {
+    const yaCoincide = b.subs && b.subs.length && b.subs[0]._cat===b.categoria;
+    if(!yaCoincide){
+      b.subs = subs.map(s=>({subtipo:s,cant:0,foto:'',_cat:b.categoria}));
+    }
+    cont.innerHTML = b.subs.map((s,i)=>filaSubHTML(s.subtipo,s.cant,s.foto,i)).join('');
   }
-  q('.rm').onclick=()=>{S.ders=S.ders.filter(x=>x.id!==id);el.remove();recalc();};
-  q('.dCat').onchange=e=>{
-    d.categoria=e.target.value; d.subtipo='';
-    const subs=subtiposDe('der',d.categoria);
-    const wrap=q('.dSubWrap');
-    if(subs.length){ wrap.style.display='block'; q('.dSub').innerHTML=subOptsModo('der',d.categoria,''); }
-    else { wrap.style.display='none'; q('.dSub').innerHTML=''; }
-  };
-  q('.dSub').onchange=e=>{d.subtipo=e.target.value;};
-  q('.dDet').oninput=e=>d.detalle=e.target.value;
-  q('.qM').onclick=()=>{d.cant=Math.max(0,(parseInt(d.cant)||0)-1);q('.dCant').value=d.cant;recalc();};
-  q('.qP').onclick=()=>{d.cant=(parseInt(d.cant)||0)+1;q('.dCant').value=d.cant;recalc();};
-  q('.dCant').oninput=e=>{d.cant=parseInt(e.target.value)||0;recalc();};
-  q('.dFoto').onchange=e=>{const f=e.target.files[0];if(!f)return;shrink(f,b64=>{d.foto=b64;q('.dPrev').src=b64;q('.dPrevWrap').style.display='block';});};
-  q('.dDel').onclick=()=>{d.foto='';q('.dPrevWrap').style.display='none';q('.dFoto').value='';};
-  recalc();
+  bindSubRows(cont,b);
 }
-$('addDer').onclick=()=>addDer();
 
-/* ===== chips (se construyen tras cargar el catálogo) ===== */
-function buildChips(){
-  const ce=$('chips'); ce.innerHTML='';
-  FRECUENTES.forEach(cod=>{const c=CAT.find(x=>x[0]===cod);if(!c)return;
-    const b=document.createElement('button');b.className='chip';b.textContent='+ '+c[2].split(':')[0];b.onclick=()=>addDef(cod);ce.appendChild(b);});
-  const cd=$('chipsDer'); if(cd){cd.innerHTML='';
-    FRECUENTES_DER.forEach(cod=>{const c=CAT.find(x=>x[0]===cod);if(!c)return;
-      const b=document.createElement('button');b.className='chip';b.style.borderColor='#5b2d9e';b.style.color='#5b2d9e';b.textContent='+ '+c[2].split(':')[0];b.onclick=()=>addDer(cod);cd.appendChild(b);});}
+/* ===== checklist completo de categorías (Defectos y Derivados) ===== */
+// Crea el bloque de datos para una categoría (con sus subtipos si los tiene)
+function crearBloqueCategoria(seccion,madre){
+  const subs=subtiposDeSeccion(seccion,madre);
+  return { categoria:madre, seccion, detalle:'', cant:0, foto:'', subs:subs.map(s=>({subtipo:s,cant:0,foto:''})) };
 }
+
+// Genera el checklist completo de DEFECTOS para la sección elegida (reemplaza S.defs)
+function generarChecklistDefectos(seccion){
+  S.defs = madresPorSeccion(seccion).map(m=>crearBloqueCategoria(seccion,m));
+  pintarChecklist($('defChecklist'),S.defs);
+}
+// Genera el checklist completo de DERIVADOS (siempre sección "Derivados", una sola vez)
+function generarChecklistDerivados(){
+  S.ders = madresPorSeccion('Derivados').map(m=>crearBloqueCategoria('Derivados',m));
+  pintarChecklist($('derChecklist'),S.ders);
+}
+
+// Pinta la lista de filas colapsables (una por categoría). Cada fila administra su propio estado (abierta/cerrada).
+function pintarChecklist(cont,bloques){
+  if(!cont) return;
+  cont.innerHTML='';
+  bloques.forEach(b=>cont.appendChild(crearFilaCategoria(b)));
+}
+
+function crearFilaCategoria(b){
+  const wrap=document.createElement('div'); wrap.className='catRow';
+  wrap.innerHTML=`<div class="catHead"><span class="catArrow">▸</span><span class="catName">${esc(b.categoria)}</span><span class="catBadge" style="display:none">0</span></div>
+    <div class="catBody"></div>`;
+  const head=wrap.querySelector('.catHead'), body=wrap.querySelector('.catBody'), arrow=wrap.querySelector('.catArrow'), badge=wrap.querySelector('.catBadge');
+
+  function actualizarBadge(){
+    const t=totalBloque(b);
+    if(t>0){ badge.style.display='inline-block'; badge.textContent=t; wrap.classList.add('tieneDatos'); }
+    else { badge.style.display='none'; wrap.classList.remove('tieneDatos'); }
+  }
+  function pintarBody(){
+    if(b.subs.length){ body.innerHTML=b.subs.map((s,i)=>filaSubHTML(s.subtipo,s.cant,s.foto,i)).join(''); }
+    else { body.innerHTML=filaSubHTML('Cantidad',b.cant,b.foto,-1); }
+    bindSubRows(body,b);
+    // los cambios dentro de bindSubRows llaman recalc(); enganchamos también la actualización del badge de esta fila
+    body.querySelectorAll('.subRow').forEach(row=>{
+      const idx=parseInt(row.dataset.idx);
+      row.querySelector('.qVal').addEventListener('input',actualizarBadge);
+      row.querySelector('.qM').addEventListener('click',actualizarBadge);
+      row.querySelector('.qP').addEventListener('click',actualizarBadge);
+    });
+  }
+  head.onclick=()=>{
+    const abierta=body.classList.contains('show');
+    if(!abierta){ pintarBody(); body.classList.add('show'); body.style.display='block'; arrow.textContent='▾'; }
+    else { body.style.display='none'; body.classList.remove('show'); arrow.textContent='▸'; }
+  };
+  actualizarBadge();
+  return wrap;
+}
+
+/* ===== cámara compartida (defectos/derivados) ===== */
+$('camGlobal').onchange=e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f||!_camTarget) return;
+  const {target,btnEl}=_camTarget;
+  shrink(f,b64=>{ target.foto=b64; pintarBotonCam(btnEl,b64); recalc(); }, null, false);
+};
+
+/* ===== selector de Sección para Defectos (manejo manual: necesita confirmar antes de perder datos) ===== */
+document.querySelectorAll('#defSeccionSeg button').forEach(btn=>{
+  btn.onclick=()=>{
+    const nuevo=btn.dataset.v;
+    if(nuevo===S.defSeccion) return;
+    const tieneDatos=(S.defs||[]).some(b=>totalBloque(b)>0);
+    if(tieneDatos && !confirm('Si cambias la sección se borrarán las cantidades que ya pusiste en Defectos. ¿Continuar?')) return;
+    document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.remove('on'));
+    btn.classList.add('on');
+    S.defSeccion=nuevo;
+    generarChecklistDefectos(S.defSeccion);
+    recalc();
+  };
+});
 
 /* ===== foto: cámara directa, con manejo de errores ===== */
-function shrink(file,cb,onerr){
+function shrink(file,cb,onerr,escaner){
+  // escaner=true (o no especificado) -> aplica el filtro tipo escáner (blanco y negro), pensado para HOJAS DE MEDIDAS.
+  // escaner=false -> mantiene el color real, para FOTOS DE DEFECTOS/DERIVADOS (el color es parte de la evidencia: manchas, tono, etc.)
+  if(escaner===undefined) escaner=true;
   const avisarError=(msg)=>{ if(onerr) onerr(msg); else toast(msg,'err'); };
   if(!file){ avisarError('No se pudo tomar la foto. Intenta de nuevo.'); return; }
   let resuelto=false;
@@ -779,20 +883,22 @@ function shrink(file,cb,onerr){
       cv.width=img.width*sc; cv.height=img.height*sc;
       const ctx=cv.getContext('2d');
       ctx.drawImage(img,0,0,cv.width,cv.height);
-      // filtro tipo escáner: gris + contraste + brillo
+      // filtro tipo escáner: gris + contraste + brillo (SOLO si escaner=true, ej. hojas de medidas)
+      if(escaner){
+        try{
+          const d=ctx.getImageData(0,0,cv.width,cv.height), px=d.data;
+          const contraste=1.35, brillo=12;
+          for(let i=0;i<px.length;i+=4){
+            let g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+            g=(g-128)*contraste+128+brillo;
+            g=g<0?0:g>255?255:g;
+            px[i]=px[i+1]=px[i+2]=g;
+          }
+          ctx.putImageData(d,0,0);
+        }catch(e){/* si falla el filtro, queda la foto normal */}
+      }
       try{
-        const d=ctx.getImageData(0,0,cv.width,cv.height), px=d.data;
-        const contraste=1.35, brillo=12;
-        for(let i=0;i<px.length;i+=4){
-          let g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
-          g=(g-128)*contraste+128+brillo;
-          g=g<0?0:g>255?255:g;
-          px[i]=px[i+1]=px[i+2]=g;
-        }
-        ctx.putImageData(d,0,0);
-      }catch(e){/* si falla el filtro, queda la foto normal */}
-      try{
-        cbSeguro(cv.toDataURL('image/jpeg',0.75));
+        cbSeguro(cv.toDataURL('image/jpeg', escaner?0.75:0.85));
       }catch(e){
         avisarError('No se pudo terminar de procesar la foto. Intenta de nuevo.');
       }
@@ -820,7 +926,7 @@ function validate(){
   if(!v2('grupo')) faltan.push('Grupo');
   if(!v2('estiloL')) faltan.push('Estilo LIVES');
   if(!v2('estiloC')) faltan.push('Estilo cliente');
-  if(!v2('po')) faltan.push('PO');
+  if(!poEsOpcional()&&!v2('po')) faltan.push('PO');
   if(!v2('color')) faltan.push('Color');
   if(!v2('destino')) faltan.push('Destino');
   if(!v('pedido')) faltan.push('Cant. pedido');
@@ -908,8 +1014,8 @@ function armarPayload(){
     override:S.override?'SÍ':'NO',override_autoriza:v('ovWho'),override_motivo:v('ovWhy'),
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
     auditor:v('auditor'),
-    defectos:S.defs.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:d.seccion,categoria:d.categoria,subtipo:d.subtipo||'',cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
-    derivados:S.ders.filter(d=>d.categoria&&d.cant>0).map(d=>({seccion:'Derivados',categoria:d.categoria,subtipo:d.subtipo||'',cantidad:d.cant,detalle:d.detalle,foto_base64:d.foto||''})),
+    defectos:expandirBloques(S.defs),
+    derivados:expandirBloques(S.ders,'Derivados'),
     fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario'),
     modo: S.editId ? 'actualizar' : 'nuevo',
     edit_id: S.editId || ''
@@ -997,23 +1103,25 @@ function nombreNorm(s){return String(s||'').toLowerCase().normalize('NFD').repla
 async function buscarMisAud(){
   const nom=($('miNombre').value||'').trim().toLowerCase();
   const cont=$('misAudList');
+  const soloSinPO=$('soloSinPO')&&$('soloSinPO').checked;
   if(!nom){ cont.innerHTML='<div class="hint">Escribe tu nombre primero.</div>'; return; }
   cont.innerHTML='<div class="hint">Buscando…</div>';
   if(!AUD_CACHE) await cargarAud();
   const nomN=nombreNorm(nom);
-  console.log('[MisAud] buscando:', nomN, '| total filas:', (AUD_CACHE||[]).length);
+  console.log('[MisAud] buscando:', nomN, '| total filas:', (AUD_CACHE||[]).length, '| solo sin PO:', soloSinPO);
   // Filtrar por nombre tolerante (sin tildes, espacios/saltos colapsados, por palabras)
   let candidatos=(AUD_CACHE||[]).filter(r=>{
     if(!r||r[0]==null||norm(r[0])==='ID_AUDITORIA') return false;
     const audN=nombreNorm(r[31]);
     if(!audN) return false;
-    // coincide si una contiene a la otra, o si comparten todas las palabras escritas
     if(audN.indexOf(nomN)>=0 || nomN.indexOf(audN)>=0) return true;
     const palabras=nomN.split(' ').filter(Boolean);
     return palabras.length>0 && palabras.every(p=>audN.indexOf(p)>=0);
   });
-  console.log('[MisAud] por nombre:', candidatos.length);
-  // ordenar por año+semana desc y por id, tomar las 5 más recientes (sin filtro de fecha estricto)
+  // Si piden "solo sin PO", filtrar también por PO vacío (col K = idx 10)
+  if(soloSinPO){ candidatos=candidatos.filter(r=>!String(r[10]||'').trim()); }
+  console.log('[MisAud] por nombre'+(soloSinPO?'+sin PO':'')+':', candidatos.length);
+  // ordenar por año+semana desc y por id
   candidatos.sort((a,b)=>{
     const ya=Number(a[37])||0, yb=Number(b[37])||0;
     if(yb!==ya) return yb-ya;
@@ -1021,14 +1129,21 @@ async function buscarMisAud(){
     if(sb!==sa) return sb-sa;
     return String(b[0]).localeCompare(String(a[0]));
   });
-  let mias=candidatos.slice(0,5);
+  // Búsqueda normal: últimas 5. Búsqueda "sin PO" (tarea de limpieza): hasta 20, para no dejar casos fuera.
+  let mias=candidatos.slice(0, soloSinPO?20:5);
   console.log('[MisAud] mostrando:', mias.length);
-  if(!mias.length){ cont.innerHTML='<div class="hint">No encontré auditorías tuyas en los últimos 7 días.</div>'; return; }
+  if(!mias.length){
+    cont.innerHTML = soloSinPO
+      ? '<div class="hint">No encontré auditorías tuyas sin PO. ✓</div>'
+      : '<div class="hint">No encontré auditorías tuyas recientes.</div>';
+    return;
+  }
   let h='';
   mias.forEach(r=>{
-    const id=r[0], fecha=fechaTxtForm(r[1]), grupo=r[7]||'', estilo=r[8]||'', po=r[10]||'', proc=r[3]||'', res=r[27]||'';
+    const id=r[0], fecha=fechaTxtForm(r[1]), grupo=r[7]||'', estilo=r[8]||'', po=r[10]||'', proc=r[3]||'';
+    const poTxt = po ? ('PO '+po) : '<span style="color:#c32030;font-weight:700">SIN PO</span>';
     h+=`<div style="border:1px solid #d8e0ea;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <div style="font-size:13px"><b>${id}</b> · ${fecha}<br><span style="color:#778">${grupo} · ${estilo} · PO ${po} · ${proc}</span></div>
+      <div style="font-size:13px"><b>${id}</b> · ${fecha}<br><span style="color:#778">${grupo} · ${estilo} · ${poTxt} · ${proc}</span></div>
       <button class="addbtn" style="white-space:nowrap;padding:8px 12px" onclick="cargarParaEditar('${id}')">✏️ Corregir</button>
     </div>`;
   });
@@ -1050,6 +1165,13 @@ function cargarParaEditar(id){
   const outOrd=$('ordinal'); if(outOrd) outOrd.value = S.nAud || '—';
   const ordH=$('ordHint'); if(ordH) ordH.textContent='N° original de esta auditoría (no cambia al corregir).';
   S.int_ext = (norm(proc).indexOf('interno')>=0) ? 'INTERNA' : (proc?'EXTERNA':'');
+  // mostrar/ocultar bloque de licencia según el proceso (solo aplica a Auditoría Final interno)
+  const licWrap=$('licWrap'); if(licWrap) licWrap.style.display=(norm(proc).indexOf('interno')>=0)?'flex':'none';
+  // sincronizar la sección del checklist de defectos con el proceso de esta auditoría
+  const seccionDef = (proc==='Costura (taller)') ? 'Costura' : 'Acabados';
+  S.defSeccion=seccionDef;
+  document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.toggle('on', x.dataset.v===seccionDef));
+  generarChecklistDefectos(seccionDef);
   // medidas
   $('medMuestra').value=r[28]||''; $('medDef').value=r[29]||''; $('medRes').value=r[30]||'';
   // comentario
@@ -1097,18 +1219,26 @@ function recolectarBorrador(){
   ['licSwitch','reproSwitch','ovSwitch'].forEach(id=>{ const el=$(id); if(el) checks[id]=el.checked; });
   return {
     ts: Date.now(), campos, checks,
-    proceso:S.proceso, nAud:S.nAud, int_ext:S.int_ext, nivel:S.nivel,
+    proceso:S.proceso, nAud:S.nAud, int_ext:S.int_ext, nivel:S.nivel, defSeccion:S.defSeccion,
     override:S.override, licencia:S.licencia, reproceso:S.reproceso, editId:S.editId||null,
-    defs:S.defs.map(d=>({seccion:d.seccion,categoria:d.categoria,subtipo:d.subtipo,cant:d.cant,detalle:d.detalle,foto:d.foto})),
-    ders:S.ders.map(d=>({categoria:d.categoria,subtipo:d.subtipo,cant:d.cant,detalle:d.detalle,foto:d.foto})),
+    defs:S.defs.map(b=>({seccion:b.seccion,categoria:b.categoria,detalle:b.detalle,cant:b.cant,foto:b.foto,subs:(b.subs||[]).map(s=>({subtipo:s.subtipo,cant:s.cant,foto:s.foto}))})),
+    ders:S.ders.map(b=>({categoria:b.categoria,detalle:b.detalle,cant:b.cant,foto:b.foto,subs:(b.subs||[]).map(s=>({subtipo:s.subtipo,cant:s.cant,foto:s.foto}))})),
     fotosMed:S.fotosMed, fotosPro:S.fotosPro
   };
 }
+function bloquesTienenCantidad(bloques){
+  return (bloques||[]).some(b=>{
+    if(b.subs&&b.subs.length) return b.subs.some(s=>(parseInt(s.cant)||0)>0);
+    return (parseInt(b.cant)||0)>0;
+  });
+}
 let _bTimer=null;
+let _borradorBloqueado=false;  // se activa justo antes de un reload intencional (guardar/cancelar/descartar) para que pagehide/visibilitychange no reescriban el borrador que acabamos de limpiar
 function guardarBorradorAhora(){
+  if(_borradorBloqueado) return;
   try{
     const b=recolectarBorrador();
-    const tieneAlgo=b.campos.grupo||b.campos.po||b.campos.estiloL||b.defs.length||b.ders.length;
+    const tieneAlgo=b.campos.grupo||b.campos.po||b.campos.estiloL||bloquesTienenCantidad(b.defs)||bloquesTienenCantidad(b.ders);
     if(!tieneAlgo){ localStorage.removeItem(BORRADOR_KEY); return; }
     localStorage.setItem(BORRADOR_KEY, JSON.stringify(b));
   }catch(e){
@@ -1122,15 +1252,32 @@ function guardarBorradorAhora(){
   }
 }
 function guardarBorradorDebounced(){ clearTimeout(_bTimer); _bTimer=setTimeout(guardarBorradorAhora,700); }
-function borrarBorrador(){ try{ localStorage.removeItem(BORRADOR_KEY); }catch(e){} }
+function borrarBorrador(){ _borradorBloqueado=true; try{ localStorage.removeItem(BORRADOR_KEY); }catch(e){} }
 
+// Sobrepone en un checklist recién generado (actual) los valores cant/foto guardados en un borrador (guardado)
+function aplicarValoresGuardados(actual,guardado){
+  if(!guardado||!guardado.length) return;
+  guardado.forEach(g=>{
+    const b=actual.find(x=>x.categoria===g.categoria);
+    if(!b) return;
+    b.detalle=g.detalle||'';
+    if(g.subs&&g.subs.length&&b.subs.length){
+      g.subs.forEach(gs=>{
+        const s=b.subs.find(x=>x.subtipo===gs.subtipo);
+        if(s){ s.cant=gs.cant||0; s.foto=gs.foto||''; }
+      });
+    } else {
+      b.cant=g.cant||0; b.foto=g.foto||'';
+    }
+  });
+}
 function restaurarBorrador(){
   let raw; try{ raw=localStorage.getItem(BORRADOR_KEY); }catch(e){ return; }
   if(!raw) return;
   let b; try{ b=JSON.parse(raw); }catch(e){ localStorage.removeItem(BORRADOR_KEY); return; }
   if(!b||!b.ts) return;
   if((Date.now()-b.ts)/3600000 > BORRADOR_MAX_HORAS){ localStorage.removeItem(BORRADOR_KEY); return; }
-  const tieneAlgo=(b.campos&&(b.campos.grupo||b.campos.po||b.campos.estiloL))||(b.defs&&b.defs.length)||(b.ders&&b.ders.length);
+  const tieneAlgo=(b.campos&&(b.campos.grupo||b.campos.po||b.campos.estiloL))||bloquesTienenCantidad(b.defs)||bloquesTienenCantidad(b.ders);
   if(!tieneAlgo) return;
 
   Object.keys(b.campos||{}).forEach(id=>{ const el=$(id); if(el) el.value=b.campos[id]; });
@@ -1144,14 +1291,29 @@ function restaurarBorrador(){
   document.querySelectorAll('#segA button').forEach(x=>{ x.classList.toggle('on', x.dataset.v===S.nivel); });
   if($('ovFields')) $('ovFields').classList.toggle('show', S.override);
   if($('tallerWrap')) $('tallerWrap').style.display=(S.proceso&&S.int_ext==='EXTERNA')?'block':'none';
+  // licencia solo aplica a Auditoría Final (interno)
+  const esInterno = S.proceso==='Acabados Final (interno)';
+  const licWrap=$('licWrap'); if(licWrap) licWrap.style.display = esInterno ? 'flex' : 'none';
+  if(!esInterno && S.licencia){ S.licencia=false; if($('licSwitch')) $('licSwitch').checked=false; }
   if(S.proceso&&typeof fillTaller==='function') fillTaller(S.proceso);
 
   S.fotosMed=b.fotosMed||[]; S.fotosPro=b.fotosPro||[];
   if(typeof actualizarCardProceso==='function') actualizarCardProceso();
   pintarFotos('med'); pintarFotos('pro');
 
-  (b.defs||[]).forEach(d=>addDef(null,d));
-  (b.ders||[]).forEach(d=>addDer(null,d));
+  // Defectos: regenerar el checklist de la sección guardada y sobreponer las cantidades/fotos guardadas
+  if(b.defSeccion){
+    S.defSeccion=b.defSeccion;
+    document.querySelectorAll('#defSeccionSeg button').forEach(x=>x.classList.toggle('on', x.dataset.v===S.defSeccion));
+  }
+  generarChecklistDefectos(S.defSeccion);
+  aplicarValoresGuardados(S.defs, b.defs);
+  pintarChecklist($('defChecklist'),S.defs);
+
+  // Derivados: mismo mecanismo (una sola sección fija)
+  generarChecklistDerivados();
+  aplicarValoresGuardados(S.ders, b.ders);
+  pintarChecklist($('derChecklist'),S.ders);
 
   if(typeof aplicarCliente==='function') aplicarCliente();
   recalc();
@@ -1168,6 +1330,8 @@ window.addEventListener('pagehide', guardarBorradorAhora);
 
 Promise.all([loadLists(), cargarAud()]).then(()=>{
   refrescarCascada();
+  generarChecklistDefectos(S.defSeccion);
+  generarChecklistDerivados();
   restaurarBorrador();
   recalc();
 });
