@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría Final — Interna y Talleres (En Vivo) · LIVES</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--petrol:#0E3B36;--emer:#10B981;
+    --sage:#0F7A5A; --sage-dark:#0B815E; --slate:#4E6B78; --taupe:#B45309; --rose:#DC2626;
+    --tan:#F59E0B; --warm:#DCE5E2; --warm-light:#F1F6F4; --stone:#5F726C;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#FFFFFF;color:#333;font-family:Calibri,Arial,sans-serif;font-size:14px;line-height:1.4;}
+  .header{background:var(--petrol);border-bottom:3px solid var(--emer);min-height:72px;display:flex;align-items:center;padding:0 24px;gap:18px;flex-wrap:wrap;}
+  .header svg{height:30px;display:block;}
+  .divider{width:1px;height:34px;background:rgba(255,255,255,.35);}
+  .htitle{color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px;}
+  .hsub{color:#F1F6F4;font-size:12px;}
+  .wrap{max-width:1140px;margin:0 auto;padding:20px 24px 44px;}
+
+  .loading{text-align:center;padding:60px 20px;color:var(--stone);font-size:15px;}
+  .loading .spin{display:inline-block;width:34px;height:34px;border:4px solid var(--warm-light);border-top-color:var(--sage);border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:14px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .err{display:none;background:#FBE9E9;border:1px solid var(--rose);border-radius:8px;padding:14px 18px;color:#DC2626;font-size:13px;margin:20px 24px;line-height:1.6;}
+  .err b{display:block;font-size:14px;margin-bottom:4px;}
+  .err code{background:#fff;padding:1px 6px;border-radius:4px;font-size:12px;}
+
+  .bar{display:none;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--warm-light);}
+  .bar .btn{margin-top:0;background:#fff;border:1px solid var(--warm);color:var(--sage);font-size:12.5px;padding:7px 14px;border-radius:6px;font-family:inherit;font-weight:700;cursor:pointer;}
+  .bar .btn:hover{border-color:var(--sage);background:var(--warm-light);}
+  .wsel{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#333;font-weight:600;}
+  .wsel select{font-family:inherit;font-size:14px;font-weight:700;color:var(--sage);border:1.5px solid var(--sage);border-radius:6px;padding:6px 12px;background:#fff;cursor:pointer;}
+  .modesel{display:inline-flex;border:1.5px solid var(--sage);border-radius:6px;overflow:hidden;}
+  .modesel .mbtn{background:#fff;color:var(--sage);border:none;padding:6px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  .modesel .mbtn.active{background:var(--sage);color:#fff;}
+  .livebadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sage);font-weight:700;border:1px solid var(--sage);border-radius:20px;padding:4px 12px;}
+  .livebadge .dot{width:7px;height:7px;border-radius:50%;background:var(--emer);animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  .note{background:#fff;border:1px solid var(--warm);border-left:4px solid var(--tan);border-radius:6px;padding:10px 14px;font-size:11.5px;color:var(--stone);margin-bottom:18px;line-height:1.5;}
+  .note b{color:#333;}
+  .note.warn{border-left-color:var(--rose);}
+
+  .kdual{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+  @media(max-width:760px){.kdual{grid-template-columns:1fr;}}
+  .kpanel{background:#fff;border:1px solid var(--warm);border-radius:8px;padding:16px 18px;}
+  .kpanel .kh{font-size:14px;font-weight:700;color:#fff;background:var(--sage);margin:-16px -18px 14px;padding:9px 18px;border-radius:8px 8px 0 0;}
+  .kpanel.tall .kh{background:var(--slate);}
+  .kgrid{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;}
+  .kcell{flex:1;min-width:96px;text-align:center;padding:6px 4px;}
+  .kcell .v{font-size:26px;font-weight:700;color:var(--sage);line-height:1.05;}
+  .kcell.tall .v{color:var(--slate);}
+  .kcell .l{font-size:11px;color:var(--stone);margin-top:2px;}
+  .kcell .v.ap{color:var(--sage);} .kcell .v.re{color:var(--rose);}
+  .donutwrap{display:flex;align-items:center;gap:10px;margin-top:8px;}
+  .donutwrap .dc{position:relative;width:96px;height:96px;flex:none;}
+  .donutwrap .dleg{font-size:11.5px;color:var(--stone);}
+  .donutwrap .dleg b{font-size:20px;color:var(--rose);display:block;line-height:1.1;}
+  .donutwrap .dleg .dl2{color:#333;}
+
+  .panel{background:#fff;border:1px solid var(--warm);border-radius:8px;padding:16px 18px;margin-bottom:18px;}
+  .panel .pt{font-size:15px;font-weight:700;color:#333;}
+  .panel .ph{font-size:11.5px;color:var(--stone);margin-top:2px;margin-bottom:10px;}
+  .cwrap{position:relative;width:100%;height:280px;}
+  .foot{font-size:11px;color:var(--stone);margin-top:8px;line-height:1.5;text-align:center;padding:10px 0 0;}
+  #dash{display:none;}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="htitle">AUDITORÍA FINAL — INTERNA Y TALLERES</div>
+    <div class="divider"></div>
+    <div><div class="hsub">AC-009-25 · En vivo</div></div>
+  </div>
+
+  <div class="wrap">
+
+    <div id="loading" class="loading">
+      <div class="spin"></div>
+      <div>Cargando datos en vivo desde el Sheet…</div>
+    </div>
+
+    <div id="err" class="err"></div>
+
+    <div id="bar" class="bar">
+      <span class="livebadge"><span class="dot"></span> En vivo</span>
+      <span class="modesel" id="modeWrap">
+        <button id="modeWeek" class="mbtn active" type="button" onclick="setMode('week')">Semana</button>
+        <button id="modeMonth" class="mbtn" type="button" onclick="setMode('month')">Mes</button>
+      </span>
+      <span class="wsel" id="weekWrap">Semana: <select id="weekSel"></select></span>
+      <span class="wsel" id="monthWrap" style="display:none">Mes: <select id="monthSel"></select></span>
+    </div>
+
+    <div id="dash">
+      <div class="note" id="srcNote"></div>
+      <div class="note warn" id="dataWarn" style="display:none"></div>
+
+      <!-- KPIs duales -->
+      <div class="kdual">
+        <div class="kpanel">
+          <div class="kh">🏭 LIVES — <span id="kwL">Sem</span></div>
+          <div class="kgrid">
+            <div class="kcell"><div class="v" id="L_aud">—</div><div class="l">Auditorías</div></div>
+            <div class="kcell"><div class="v" id="L_lote">—</div><div class="l">Lote auditado</div></div>
+            <div class="kcell"><div class="v ap" id="L_ap">—</div><div class="l">Aprobadas</div></div>
+            <div class="kcell"><div class="v re" id="L_re">—</div><div class="l">Rechazadas</div></div>
+          </div>
+          <div class="donutwrap">
+            <div class="dc"><canvas id="dL"></canvas></div>
+            <div class="dleg"><b id="L_pr">—</b><span class="dl2">de rechazo</span></div>
+          </div>
+        </div>
+        <div class="kpanel tall">
+          <div class="kh">🏗 TALLERES — <span id="kwT">Sem</span></div>
+          <div class="kgrid">
+            <div class="kcell tall"><div class="v" id="T_aud">—</div><div class="l">Auditorías</div></div>
+            <div class="kcell tall"><div class="v" id="T_lote">—</div><div class="l">Lote auditado</div></div>
+            <div class="kcell"><div class="v ap" id="T_ap">—</div><div class="l">Aprobadas</div></div>
+            <div class="kcell"><div class="v re" id="T_re">—</div><div class="l">Rechazadas</div></div>
+          </div>
+          <div class="donutwrap">
+            <div class="dc"><canvas id="dT"></canvas></div>
+            <div class="dleg"><b id="T_pr">—</b><span class="dl2">de rechazo</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="pt">📈 Tendencia mensual</div>
+        <div class="ph" id="mSub">% de aprobación vs % de rechazo por mes (todo el año, LIVES + Talleres).</div>
+        <div class="cwrap"><canvas id="cMensual"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="pt">📈 Tendencia semanal</div>
+        <div class="ph" id="wSub">% de aprobación vs % de rechazo de las últimas semanas.</div>
+        <div class="cwrap"><canvas id="cSemanal"></canvas></div>
+      </div>
+
+      <div class="foot" id="foot"></div>
+    </div>
+  </div>
+
+<script>
+/* ===================== Config ===================== */
+const SHEET_ID   = '1zM-ajBkOs_PgyzEaXh_gVJ1seXvjRJSVO1ZRql7KnVQ';
+const SHEET_NAME = 'AUDITORÍAS';
+
+// Índices de columna (0-based) según ficha de estructura AC-009-25
+const COL = {
+  FECHA:1, N_AUDITORIA:2, PROCESO:3, INT_EXT:4, SERVICIO:5, CLIENTE:6, GRUPO:7,
+  ESTILO_LIVES:8, ESTILO_CLIENTE:9, PO:10, COLOR:11, DESTINO:12, CANT_PEDIDO:13,
+  TOTAL_RECIBIDO:14, LICENCIA:16, MUESTRA:18, TOTAL_DEF:22, RESULTADO_FINAL:27,
+  AUDITOR:31, SEMANA:32, REPETIDO:35, LOTE_CONTABLE:36, ANIO:37, COMPUTABLE:38,
+  REPROCESO:39, TOTAL_DER:41, MUESTRA_CONTABLE:44
+};
+
+const SAGE='#0F7A5A', ROSE='#DC2626', WARM='#DCE5E2', WARML='#F1F6F4', SLATE='#4E6B78';
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+let ROWS=[];       // filas computables (COMPUTABLE=1)
+let OTHER_RES=0;   // filas con RESULTADO_FINAL fuera de APROBADO/RECHAZADO
+let YEARS=[], WEEKS=[], MONTHS=[];
+let CURMODE='week', CURVAL=null;
+let CHARTS=[];
+
+function reg(c){CHARTS.push(c);return c;}
+function clearCharts(){CHARTS.forEach(c=>{try{c.destroy();}catch(e){}});CHARTS=[];}
+function nf(n){return Number(n||0).toLocaleString('es-PE');}
+function pct(a,b){return b?+(a/b*100).toFixed(1):0;}
+
+/* ===================== Carga en vivo (gviz) ===================== */
+async function cargarDatos(){
+  try{
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text = await res.text();
+    const m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);\s*$/);
+    if(!m) throw new Error('Formato de respuesta inesperado del Sheet');
+    const json = JSON.parse(m[1]);
+    const rows = json.table.rows || [];
+
+    const val = (c, idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : null;
+    const strv = (c, idx) => { const v = val(c, idx); return v === null ? '' : String(v).trim(); };
+    const numv = (c, idx) => { const v = val(c, idx); const n = Number(v); return isNaN(n) ? 0 : n; };
+
+    function parseFecha(v){
+      if(v === null || v === undefined) return null;
+      if(v instanceof Date) return v;
+      if(typeof v === 'string'){
+        // formato gviz típico: "Date(2026,5,13)"
+        const gm = v.match(/^Date\((\d+),(\d+),(\d+)/);
+        if(gm) return new Date(+gm[1], +gm[2], +gm[3]);
+        const d = new Date(v);
+        if(!isNaN(d)) return d;
+      }
+      return null;
+    }
+
+    let all = [];
+    rows.forEach(r=>{
+      const c = r.c || [];
+      const computable = numv(c, COL.COMPUTABLE);
+      if(computable !== 1) return; // filtro obligatorio: solo auditorías computables
+      const fecha = parseFecha(val(c, COL.FECHA));
+      const anio = numv(c, COL.ANIO) || (fecha ? fecha.getFullYear() : null);
+      const semana = numv(c, COL.SEMANA);
+      const mes = fecha ? fecha.getMonth() : null;
+      const intext = strv(c, COL.INT_EXT).toUpperCase(); // INTERNA / EXTERNA
+      const resultado = strv(c, COL.RESULTADO_FINAL).toUpperCase();
+      const servicio = strv(c, COL.SERVICIO);
+      const loteContable = numv(c, COL.LOTE_CONTABLE);
+      const muestraContable = numv(c, COL.MUESTRA_CONTABLE);
+      if(!anio || !semana) return;
+      all.push({fecha, anio, semana, mes, intext, resultado, servicio, loteContable, muestraContable});
+    });
+
+    // filas cuyo resultado no es APROBADO/RECHAZADO (transparencia, no se descartan del total)
+    OTHER_RES = all.filter(r => r.resultado !== 'APROBADO' && r.resultado !== 'RECHAZADO').length;
+
+    ROWS = all;
+    YEARS = [...new Set(all.map(r=>r.anio))].sort((a,b)=>b-a);
+    const latestYear = YEARS[0];
+    const ofYear = all.filter(r=>r.anio===latestYear);
+    WEEKS = [...new Set(ofYear.map(r=>r.semana))].sort((a,b)=>a-b);
+    MONTHS = [...new Set(ofYear.filter(r=>r.mes!==null).map(r=>r.mes))].sort((a,b)=>a-b);
+
+    if(!all.length) throw new Error('El Sheet respondió pero no se encontraron filas computables (COMPUTABLE=1). Verifica que la hoja "AUDITORÍAS" tenga datos.');
+
+    document.getElementById('loading').style.display='none';
+    document.getElementById('bar').style.display='flex';
+    document.getElementById('dash').style.display='block';
+
+    if(OTHER_RES>0){
+      const w=document.getElementById('dataWarn');
+      w.style.display='block';
+      w.innerHTML='<b>Aviso de datos</b> Se encontraron '+OTHER_RES+' auditoría(s) computable(s) cuyo RESULTADO_FINAL no es exactamente "APROBADO" ni "RECHAZADO" (posible valor de OVERRIDE u otro). Se cuentan en el total de auditorías pero no en los % de aprobación/rechazo. Revisar en el Sheet si es necesario.';
+    }
+
+    poblarSelectores(latestYear);
+    setMode('week');
+  }catch(e){
+    document.getElementById('loading').style.display='none';
+    const err = document.getElementById('err');
+    err.style.display='block';
+    err.innerHTML = '<b>⚠ No se pudo cargar el dashboard en vivo</b>'+
+      'Detalle técnico: <code>'+(e && e.message ? e.message : e)+'</code><br><br>'+
+      'Verifica: 1) que el Google Sheet esté compartido como "Cualquier persona con el enlace — Lector"; '+
+      '2) que la hoja se llame exactamente <code>AUDITORÍAS</code>; 3) tu conexión a internet. '+
+      'Si el problema persiste, avisa a Christian con este mensaje.';
+    console.error(e);
+  }
+}
+
+function poblarSelectores(year){
+  const wSel = document.getElementById('weekSel');
+  wSel.innerHTML = WEEKS.map(w=>`<option value="${w}">Semana ${w}</option>`).join('');
+  wSel.value = WEEKS[WEEKS.length-1];
+  wSel.onchange = ()=>render('week', +wSel.value);
+
+  const mSel = document.getElementById('monthSel');
+  mSel.innerHTML = MONTHS.map(m=>`<option value="${m}">${MESES[m]} ${year}</option>`).join('');
+  mSel.value = MONTHS[MONTHS.length-1];
+  mSel.onchange = ()=>render('month', +mSel.value);
+}
+
+function setMode(m){
+  CURMODE = m;
+  document.getElementById('modeWeek').classList.toggle('active', m==='week');
+  document.getElementById('modeMonth').classList.toggle('active', m==='month');
+  document.getElementById('weekWrap').style.display = m==='week' ? 'inline-flex' : 'none';
+  document.getElementById('monthWrap').style.display = m==='month' ? 'inline-flex' : 'none';
+  if(m==='week') render('week', +document.getElementById('weekSel').value);
+  else render('month', +document.getElementById('monthSel').value);
+}
+
+/* ===================== Render ===================== */
+function kpiFor(rows, prefix, label){
+  const ap = rows.filter(r=>r.resultado==='APROBADO').length;
+  const re = rows.filter(r=>r.resultado==='RECHAZADO').length;
+  const lote = rows.reduce((s,r)=>s+r.loteContable,0);
+  const rePct = pct(re, ap+re);
+  document.getElementById(prefix+'_aud').textContent = nf(rows.length);
+  document.getElementById(prefix+'_lote').textContent = nf(lote);
+  document.getElementById(prefix+'_ap').textContent = nf(ap);
+  document.getElementById(prefix+'_re').textContent = nf(re);
+  document.getElementById(prefix+'_pr').textContent = rePct+'%';
+  document.getElementById('kw'+(prefix==='L'?'L':'T')).textContent = label;
+  return {ap, re};
+}
+
+function render(mode, value){
+  clearCharts();
+  CURMODE=mode; CURVAL=value;
+  const isMonth = mode==='month';
+  const wrows = isMonth ? ROWS.filter(r=>r.mes===value) : ROWS.filter(r=>r.semana===value);
+  const plabel = isMonth ? (MESES[value]+' '+YEARS[0]) : ('Sem '+value);
+
+  document.getElementById('srcNote').innerHTML =
+    `<b>Fuente:</b> AC-009-25 (en vivo) · Año <b>${YEARS[0]}</b> · ${isMonth?'Mes: '+MESES[value]:'Semana '+value} · `+
+    `Solo auditorías computables (COMPUTABLE=1). Tasas = RECHAZADAS / (APROBADAS+RECHAZADAS).`;
+
+  const liveRows = wrows.filter(r=>r.intext==='INTERNA');
+  const tallerRows = wrows.filter(r=>r.intext==='EXTERNA');
+
+  const L = kpiFor(liveRows, 'L', plabel);
+  const T = kpiFor(tallerRows, 'T', plabel);
+
+  reg(new Chart(document.getElementById('dL'), {type:'doughnut',
+    data:{labels:['Aprobado','Rechazado'], datasets:[{data:[L.ap,L.re], backgroundColor:[SAGE,ROSE], borderWidth:0}]},
+    options:{cutout:'68%', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}}));
+
+  reg(new Chart(document.getElementById('dT'), {type:'doughnut',
+    data:{labels:['Aprobado','Rechazado'], datasets:[{data:[T.ap,T.re], backgroundColor:[SAGE,ROSE], borderWidth:0}]},
+    options:{cutout:'68%', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}}));
+
+  // Tendencia mensual (todo el año, LIVES+Talleres combinado)
+  const mLabels = MONTHS.map(m=>MESES[m]);
+  const mAp = MONTHS.map(m=>{
+    const rs = ROWS.filter(r=>r.mes===m);
+    const ap=rs.filter(r=>r.resultado==='APROBADO').length, re=rs.filter(r=>r.resultado==='RECHAZADO').length;
+    return pct(ap, ap+re);
+  });
+  const mRe = MONTHS.map(m=>{
+    const rs = ROWS.filter(r=>r.mes===m);
+    const ap=rs.filter(r=>r.resultado==='APROBADO').length, re=rs.filter(r=>r.resultado==='RECHAZADO').length;
+    return pct(re, ap+re);
+  });
+  reg(new Chart(document.getElementById('cMensual'), {type:'line',
+    data:{labels:mLabels, datasets:[
+      {label:'% Aprobación', data:mAp, borderColor:SAGE, backgroundColor:'rgba(15,122,90,.08)', borderWidth:2.5, pointRadius:3, pointBackgroundColor:SAGE, tension:.3, fill:true},
+      {label:'% Rechazo', data:mRe, borderColor:ROSE, borderWidth:2.5, pointRadius:3, pointBackgroundColor:ROSE, tension:.3, fill:false}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top', labels:{boxWidth:14, usePointStyle:true}}, tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+'%'}}},
+      scales:{x:{grid:{display:false}, border:{color:WARM}}, y:{min:0, max:100, grid:{color:WARML}, border:{display:false}, ticks:{callback:v=>v+'%'}}}}}));
+
+  // Tendencia semanal (últimas hasta la seleccionada, máx 8)
+  const wKeys = WEEKS.filter(w=> isMonth ? true : w<=value).slice(-8);
+  const wAp = wKeys.map(w=>{
+    const rs = ROWS.filter(r=>r.semana===w);
+    const ap=rs.filter(r=>r.resultado==='APROBADO').length, re=rs.filter(r=>r.resultado==='RECHAZADO').length;
+    return pct(ap, ap+re);
+  });
+  const wRe = wKeys.map(w=>{
+    const rs = ROWS.filter(r=>r.semana===w);
+    const ap=rs.filter(r=>r.resultado==='APROBADO').length, re=rs.filter(r=>r.resultado==='RECHAZADO').length;
+    return pct(re, ap+re);
+  });
+  reg(new Chart(document.getElementById('cSemanal'), {type:'line',
+    data:{labels:wKeys.map(w=>'Sem '+w), datasets:[
+      {label:'% Aprobación', data:wAp, borderColor:SAGE, pointBackgroundColor:SAGE, pointRadius:4, tension:.3, fill:false, borderWidth:2.5},
+      {label:'% Rechazo', data:wRe, borderColor:ROSE, pointBackgroundColor:ROSE, pointRadius:4, tension:.3, fill:false, borderWidth:2.5}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top', labels:{boxWidth:14, usePointStyle:true}}, tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+'%'}}},
+      scales:{x:{grid:{display:false}, border:{color:WARM}}, y:{min:0, max:100, grid:{color:WARML}, border:{display:false}, ticks:{callback:v=>v+'%'}}}}}));
+
+  const hoy = new Date().toLocaleDateString('es-PE',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('foot').innerHTML = 'Confidencial — Uso Interno · Calidad Manufactura LIVES · AC-009-25 en vivo · Vista generada el '+hoy;
+}
+
+cargarDatos();
+</script>
+</body>
+</html>
