@@ -124,7 +124,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
   <!-- MIS AUDITORÍAS (corregir) -->
   <div class="card" style="border:2px dashed #d4e0ee;background:#f7fafc">
     <div class="sec"><span class="dot"></span>¿Necesitas corregir una auditoría que ya hiciste?</div>
-    <div class="hint" style="margin:-6px 0 10px">Busca por tu nombre tus últimas auditorías (últimos 7 días) y selecciona la que quieras corregir.</div>
+    <div class="hint" style="margin:-6px 0 10px">Busca por tu nombre y verás aquí mismo la lista completa de tus auditorías, con todos sus detalles, para elegir cuál corregir.</div>
     <div class="grid">
       <div class="full"><label>Mi nombre</label><input id="miNombre" list="auditoras2" autocomplete="off" placeholder="Escribe tu nombre">
         <datalist id="auditoras2"></datalist></div>
@@ -133,7 +133,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
       <input type="checkbox" id="soloSinPO" style="width:16px;height:16px">
       Solo auditorías <b>sin PO</b> (para completarlo cuando ya lo tengan)
     </label>
-    <button class="addbtn" id="btnMisAud" style="margin-top:8px">🔍 Ver mis auditorías recientes</button>
+    <button class="addbtn" id="btnMisAud" style="margin-top:8px">📋 Ver mis auditorías</button>
     <div id="misAudList" style="margin-top:10px"></div>
     <div id="modoEdicion" style="display:none;margin-top:10px;padding:10px 12px;background:#fff4e0;border:1px solid #e9c46a;border-radius:10px;font-size:13px;color:#7a5a12">
       ✏️ <b>Estás corrigiendo la auditoría <span id="editId"></span>.</b> Cambia lo que necesites abajo y guarda.
@@ -1046,7 +1046,7 @@ $('save').onclick=async()=>{
       const data=await enviarUno(payload);
       borrarBorrador();
       toast('Corrección guardada · '+(data.id||S.editId),'ok');
-      setTimeout(()=>location.reload(),2000);
+      setTimeout(()=>recargarLimpio(),2000);
     }catch(err){
       toast('No se pudo guardar la corrección: '+(err.message||err),'err');
       btn.disabled=false; btn.textContent='Guardar';
@@ -1057,19 +1057,19 @@ $('save').onclick=async()=>{
   if(navigator.onLine===false){
     try{ await colaAdd(payload); await refrescarPend(); borrarBorrador();
       toast('Sin señal. Guardada en el celular. Envíala cuando tengas internet.','err');
-      setTimeout(()=>location.reload(),2600);
+      setTimeout(()=>recargarLimpio(),2600);
     }catch(e){ toast('No se pudo guardar localmente: '+e.message,'err'); btn.disabled=false;btn.textContent='Guardar'; }
     return;
   }
   try{
     const data=await enviarUno(payload);
     borrarBorrador();
-    toast('Guardada '+data.id+' · '+data.resultado,'ok');setTimeout(()=>location.reload(),2200);
+    toast('Guardada '+data.id+' · '+data.resultado,'ok');setTimeout(()=>recargarLimpio(),2200);
   }catch(err){
     // falló el envío (señal intermitente) -> guardar en cola
     try{ await colaAdd(payload); await refrescarPend(); borrarBorrador();
       toast('No se pudo enviar. Guardada en el celular para enviar luego.','err');
-      setTimeout(()=>location.reload(),2600);
+      setTimeout(()=>recargarLimpio(),2600);
     }catch(e){ toast('No se pudo guardar: '+e.message,'err'); btn.disabled=false;btn.textContent='Guardar'; }
   }
 };
@@ -1112,14 +1112,13 @@ function semanaActualForm(){
 
 function nombreNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
 async function buscarMisAud(){
-  const nom=($('miNombre').value||'').trim().toLowerCase();
+  const nom=($('miNombre').value||'').trim();
   const cont=$('misAudList');
   const soloSinPO=$('soloSinPO')&&$('soloSinPO').checked;
   if(!nom){ cont.innerHTML='<div class="hint">Escribe tu nombre primero.</div>'; return; }
   cont.innerHTML='<div class="hint">Buscando…</div>';
   if(!AUD_CACHE) await cargarAud();
   const nomN=nombreNorm(nom);
-  console.log('[MisAud] buscando:', nomN, '| total filas:', (AUD_CACHE||[]).length, '| solo sin PO:', soloSinPO);
   // Filtrar por nombre tolerante (sin tildes, espacios/saltos colapsados, por palabras)
   let candidatos=(AUD_CACHE||[]).filter(r=>{
     if(!r||r[0]==null||norm(r[0])==='ID_AUDITORIA') return false;
@@ -1129,10 +1128,8 @@ async function buscarMisAud(){
     const palabras=nomN.split(' ').filter(Boolean);
     return palabras.length>0 && palabras.every(p=>audN.indexOf(p)>=0);
   });
-  // Si piden "solo sin PO", filtrar también por PO vacío (col K = idx 10)
   if(soloSinPO){ candidatos=candidatos.filter(r=>!String(r[10]||'').trim()); }
-  console.log('[MisAud] por nombre'+(soloSinPO?'+sin PO':'')+':', candidatos.length);
-  // ordenar por año+semana desc y por id
+  // ordenar por año+semana desc y por id (la más reciente primero)
   candidatos.sort((a,b)=>{
     const ya=Number(a[37])||0, yb=Number(b[37])||0;
     if(yb!==ya) return yb-ya;
@@ -1140,22 +1137,33 @@ async function buscarMisAud(){
     if(sb!==sa) return sb-sa;
     return String(b[0]).localeCompare(String(a[0]));
   });
-  // Búsqueda normal: últimas 5. Búsqueda "sin PO" (tarea de limpieza): hasta 20, para no dejar casos fuera.
-  let mias=candidatos.slice(0, soloSinPO?20:5);
-  console.log('[MisAud] mostrando:', mias.length);
+  // Sin límite artificial: muestra TODAS las que encontró (antes solo mostraba 5)
+  const mias=candidatos;
   if(!mias.length){
     cont.innerHTML = soloSinPO
       ? '<div class="hint">No encontré auditorías tuyas sin PO. ✓</div>'
-      : '<div class="hint">No encontré auditorías tuyas recientes.</div>';
+      : '<div class="hint">No encontré auditorías con ese nombre.</div>';
     return;
   }
-  let h='';
+  let h=`<div class="hint" style="margin-bottom:8px">${mias.length} auditoría(s) encontrada(s):</div>`;
   mias.forEach(r=>{
-    const id=r[0], fecha=fechaTxtForm(r[1]), grupo=r[7]||'', estilo=r[8]||'', po=r[10]||'', proc=r[3]||'';
+    const id=r[0], fecha=fechaTxtForm(r[1]), grupo=r[7]||'—', estiloL=r[8]||'—', estiloC=r[9]||'—';
+    const po=r[10]||'', color=r[11]||'—', proc=r[3]||'—';
+    const res=(r[27]||'').toUpperCase();
+    let tag='';
+    if(res.indexOf('APROB')>=0) tag='<span style="color:#1c7a6e;font-weight:800">APROBADO</span>';
+    else if(res.indexOf('RECH')>=0) tag='<span style="color:#c32030;font-weight:800">RECHAZADO</span>';
+    else if(res) tag='<span style="color:#9a7415;font-weight:800">'+res+'</span>';
     const poTxt = po ? ('PO '+po) : '<span style="color:#c32030;font-weight:700">SIN PO</span>';
-    h+=`<div style="border:1px solid #d8e0ea;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <div style="font-size:13px"><b>${id}</b> · ${fecha}<br><span style="color:#778">${grupo} · ${estilo} · ${poTxt} · ${proc}</span></div>
-      <button class="addbtn" style="white-space:nowrap;padding:8px 12px" onclick="cargarParaEditar('${id}')">✏️ Corregir</button>
+    h+=`<div style="border:1px solid #d8e0ea;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px"><b>${id}</b> ${tag}<br><span style="color:#778">${fecha} · ${proc}</span></div>
+        <button class="addbtn" style="white-space:nowrap;padding:8px 12px" onclick="cargarParaEditar('${id}')">✏️ Corregir</button>
+      </div>
+      <div style="margin-top:6px;font-size:12.5px;color:#334;line-height:1.5">
+        <b>Grupo:</b> ${grupo} · <b>Estilo LIVES:</b> ${estiloL} · <b>Estilo cliente:</b> ${estiloC}<br>
+        <b>${poTxt}</b> · <b>Color:</b> ${color}
+      </div>
     </div>`;
   });
   cont.innerHTML=h;
@@ -1190,7 +1198,7 @@ function cargarParaEditar(id){
   S.editId=id;
   $('editId').textContent=id;
   $('modoEdicion').style.display='block';
-  $('btnMisAud').textContent='🔍 Ver mis auditorías recientes';
+  $('btnMisAud').textContent='📋 Ver mis auditorías';
   // Recalcular y refrescar
   if(typeof aplicarCliente==='function') aplicarCliente();
   if(typeof fillTaller==='function' && S.proceso) fillTaller(S.proceso);
@@ -1200,15 +1208,19 @@ function cargarParaEditar(id){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+function recargarLimpio(){
+  // recarga sin ningún parámetro en la URL (evita volver a entrar en modo edición tras guardar)
+  location.href = location.pathname;
+}
 function cancelarEdicion(){
   S.editId=null;
   borrarBorrador();
   $('modoEdicion').style.display='none';
-  location.reload();  // limpia todo
+  recargarLimpio();  // limpia todo
 }
 function descartarBorradorYEmpezar(){
   borrarBorrador();
-  location.reload();
+  recargarLimpio();
 }
 
 $('btnMisAud').onclick=buscarMisAud;
