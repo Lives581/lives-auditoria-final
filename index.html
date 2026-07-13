@@ -349,12 +349,13 @@ async function cargarAud(){
 }
 function norm(v){ return String(v==null?'':v).trim().toUpperCase(); }
 // Llave de lote = grupo+estilo_lives+estilo_cliente+color+po (col H,I,J,L,K = idx 7,8,9,11,10)
+// La llave de "mismo lote" YA NO incluye el PO (a veces no está disponible aún en Costura) ni Destino.
 function llaveActual(){
-  return [norm($('grupo').value),norm($('estiloL').value),norm($('estiloC').value),norm($('color').value),norm($('po').value)].join('|');
+  return [norm($('grupo').value),norm($('estiloL').value),norm($('estiloC').value),norm($('color').value)].join('|');
 }
 function llaveFila(r){
-  // r = fila de AUDITORÍAS (array). idx: H=7 grupo, I=8 estLives, J=9 estCli, K=10 po, L=11 color, D=3 proceso
-  return [norm(r[7]),norm(r[8]),norm(r[9]),norm(r[11]),norm(r[10])].join('|');
+  // r = fila de AUDITORÍAS (array). idx: H=7 grupo, I=8 estLives, J=9 estCli, L=11 color
+  return [norm(r[7]),norm(r[8]),norm(r[9]),norm(r[11])].join('|');
 }
 function poEsOpcional(){ return S.proceso==='Costura (taller)'; }
 function loteCompleto(){
@@ -522,10 +523,11 @@ function mostrarPanelPrevias(){
   const key=llaveActual();
   const previas=filasValidas().filter(r=>llaveFila(r)===key);
   if(!previas.length){ panel.style.display='none'; return; }
-  // Cada fila: AF=31 auditor, D=3 proceso, B=1 fecha, AB=27 resultado_final
+  // Cada fila: AF=31 auditor, D=3 proceso, B=1 fecha, AB=27 resultado_final, K=10 PO, M=12 destino
   const items=previas.map(r=>{
     const aud=r[31]||'—', proc=r[3]||'—', fec=(r[1]||'').substring(0,10), res=r[27]||'—';
-    return `<div>• <b>${aud}</b> · ${proc} · ${fec} · <span style="font-weight:600">${res}</span></div>`;
+    const po=r[10]||'—', dest=r[12]||'—';
+    return `<div>• <b>${aud}</b> · ${proc} · ${fec} · <span style="font-weight:600">${res}</span><br><span style="color:#778;font-size:12px;padding-left:12px">PO ${po} · Destino ${dest}</span></div>`;
   }).join('');
   body.innerHTML=items;
   panel.style.display='block';
