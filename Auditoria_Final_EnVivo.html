@@ -66,6 +66,47 @@
   .cwrap{position:relative;width:100%;height:280px;}
   .foot{font-size:11px;color:var(--stone);margin-top:8px;line-height:1.5;text-align:center;padding:10px 0 0;}
   #dash{display:none;}
+
+  #rankTbl td{padding:7px 10px;border-bottom:1px solid var(--warm-light);}
+  #rankTbl tr.rk-row{cursor:pointer;}
+  #rankTbl tr.rk-row:hover{background:var(--warm-light);}
+  .st{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;}
+  .st.exc{background:#E7F7F0;color:#0B815E;} .st.bue{background:#ECFDF5;color:var(--sage);}
+  .st.rev{background:#F3EEE2;color:#B45309;} .st.ale{background:#FBE9E9;color:#DC2626;}
+  .st.cri{background:#DC2626;color:#fff;}
+  .fbtn{background:var(--sage);color:#fff;border:none;border-radius:5px;padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;}
+  .fbtn:hover{background:var(--sage-dark);}
+
+  .ficha-overlay{display:none;position:fixed;inset:0;background:rgba(14,59,54,.55);z-index:1000;overflow:auto;padding:22px;}
+  .ficha-overlay.show{display:block;}
+  .ficha-card{max-width:720px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 10px 50px rgba(0,0,0,.35);}
+  .ficha-actions{max-width:720px;margin:14px auto 0;display:flex;gap:10px;justify-content:center;}
+  .ficha-actions .btn{background:var(--sage);color:#fff;border:none;border-radius:6px;padding:9px 18px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  .ficha-actions .btn.ghost{background:#fff;border:1px solid #fff;color:#fff;}
+  .fc-hd{padding:18px 24px;color:#fff;background:var(--petrol);display:flex;justify-content:space-between;align-items:center;}
+  .fc-hd .co{font-size:10px;letter-spacing:2px;opacity:.85;text-transform:uppercase;}
+  .fc-hd .tn{font-size:22px;font-weight:700;line-height:1.1;}
+  .fc-hd .tsub{font-size:11px;opacity:.9;margin-top:2px;}
+  .fc-hd .tpct{font-size:28px;font-weight:700;text-align:right;line-height:1;}
+  .fc-hd .tpct small{display:block;font-size:10px;opacity:.85;font-weight:400;}
+  .fc-body{padding:18px 24px 22px;}
+  .fc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+  .fc-kpis .k{background:var(--warm-light);border-radius:6px;padding:10px;text-align:center;}
+  .fc-kpis .k .v{font-size:19px;font-weight:700;color:#333;} .fc-kpis .k .l{font-size:10px;color:var(--stone);}
+  .fc-sec{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--sage);text-transform:uppercase;margin:16px 0 8px;}
+  .fc-defs{display:flex;flex-wrap:wrap;gap:6px;}
+  .fc-defs .d{font-size:10.5px;background:var(--warm-light);border:1px solid var(--warm);border-radius:20px;padding:4px 10px;}
+  .fc-defs .d b{color:var(--rose);}
+  .fc-note{border-left:3px solid var(--sage);background:var(--warm-light);border-radius:0 6px 6px 0;padding:9px 13px;font-size:12px;color:#333;margin-top:10px;line-height:1.5;}
+  .fc-note.warn{border-left-color:var(--rose);}
+  .fc-foot{background:var(--warm-light);padding:10px 24px;font-size:10px;color:var(--stone);display:flex;justify-content:space-between;}
+  @media print{
+    @page{size:A4 portrait;margin:11mm;}
+    body.print-ficha .header,body.print-ficha .wrap{display:none!important;}
+    body.print-ficha #fichaOverlay{position:static!important;display:block!important;background:#fff!important;padding:0!important;overflow:visible!important;}
+    body.print-ficha .ficha-card{box-shadow:none;max-width:100%;border-radius:0;}
+    .no-print{display:none!important;}
+  }
 </style>
 </head>
 <body>
@@ -140,7 +181,56 @@
         <div class="cwrap"><canvas id="cSemanal"></canvas></div>
       </div>
 
+      <div class="panel">
+        <div class="pt">⚖️ Tendencia semanal — LIVES vs Talleres vs Promedio</div>
+        <div class="ph">% de rechazo de las últimas semanas hasta la seleccionada. "Promedio" = rechazo global de la semana.</div>
+        <div class="cwrap"><canvas id="cCompSemanal"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="pt">📋 Resultados por proceso (1ra vs 2da/3ra auditoría)</div>
+        <div class="ph" id="procSub">% de resultados por número de auditoría (período seleccionado).</div>
+        <div class="cwrap" style="height:220px;"><canvas id="cProceso"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="pt">🏆 Ranking de talleres externos</div>
+        <div class="ph" id="rankSub">Ordenado por menor % de aprobación primero. Clic en una fila para ver la ficha imprimible.</div>
+        <div style="overflow-x:auto;">
+          <table id="rankTbl" style="width:100%;border-collapse:collapse;font-size:12.5px;">
+            <thead><tr style="background:var(--warm-light);text-align:left;">
+              <th style="padding:8px 10px;">#</th><th style="padding:8px 10px;">Taller</th>
+              <th style="padding:8px 10px;text-align:right;">Aud.</th>
+              <th style="padding:8px 10px;text-align:right;">Aprob.</th>
+              <th style="padding:8px 10px;text-align:right;">Rech.</th>
+              <th style="padding:8px 10px;text-align:right;">% Aprob.</th>
+              <th style="padding:8px 10px;text-align:center;">Estado</th>
+              <th style="padding:8px 10px;"></th>
+            </tr></thead>
+            <tbody id="rankBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="pt">🔍 Defectos por origen</div>
+        <div class="ph" id="defSub">Incidencias por categoría madre de defecto (período seleccionado).</div>
+        <div class="note" id="defWarn" style="display:none;font-size:11px;"></div>
+        <div class="grid2">
+          <div><div style="font-weight:700;color:var(--sage);font-size:12.5px;margin-bottom:8px;">🏭 LIVES</div><div class="cwrap" id="wrapDefL" style="height:240px;"><canvas id="cDefLives"></canvas></div></div>
+          <div><div style="font-weight:700;color:var(--slate);font-size:12.5px;margin-bottom:8px;">🏗 TALLERES</div><div class="cwrap" id="wrapDefT" style="height:240px;"><canvas id="cDefTalleres"></canvas></div></div>
+        </div>
+      </div>
+
       <div class="foot" id="foot"></div>
+    </div>
+  </div>
+
+  <div id="fichaOverlay" class="ficha-overlay">
+    <div class="ficha-card" id="fichaCard"></div>
+    <div class="ficha-actions no-print">
+      <button class="btn" type="button" onclick="window.print()">🖨 Imprimir</button>
+      <button class="btn ghost" type="button" onclick="document.getElementById('fichaOverlay').classList.remove('show')">✕ Cerrar</button>
     </div>
   </div>
 
@@ -148,6 +238,11 @@
 /* ===================== Config ===================== */
 const SHEET_ID   = '1zM-ajBkOs_PgyzEaXh_gVJ1seXvjRJSVO1ZRql7KnVQ';
 const SHEET_NAME = 'AUDITORÍAS';
+const SHEET_DEFECTOS = 'DEFECTOS';
+// Estructura DEFECTOS según ficha (no verificada aún contra el Sheet real — ver aviso en el dashboard)
+const DCOL = { ID_AUDITORIA:0, SECCION:1, CATEGORIA:2, SUBTIPO:3, CANTIDAD:4, DETALLE:5, FOTO_URL:6 };
+let DEF_ROWS=[];      // filas de la hoja DEFECTOS
+let DEF_LOAD_OK=true; // false si falló la carga de DEFECTOS (no bloquea el resto del dashboard)
 
 // Índices de columna (0-based) según ficha de estructura AC-009-25
 const COL = {
@@ -215,8 +310,10 @@ async function cargarDatos(){
       const servicio = strv(c, COL.SERVICIO);
       const loteContable = numv(c, COL.LOTE_CONTABLE);
       const muestraContable = numv(c, COL.MUESTRA_CONTABLE);
+      const nAuditoria = strv(c, COL.N_AUDITORIA);
+      const idAuditoria = strv(c, 0);
       if(!anio || !semana) return;
-      all.push({fecha, anio, semana, mes, intext, resultado, servicio, loteContable, muestraContable});
+      all.push({id:idAuditoria, fecha, anio, semana, mes, intext, resultado, servicio, loteContable, muestraContable, nAuditoria});
     });
 
     // filas cuyo resultado no es APROBADO/RECHAZADO (transparencia, no se descartan del total)
@@ -242,6 +339,7 @@ async function cargarDatos(){
     }
 
     poblarSelectores(latestYear);
+    await cargarDefectos(); // no bloqueante para el resto: si falla, el dashboard sigue funcionando
     setMode('week');
   }catch(e){
     document.getElementById('loading').style.display='none';
@@ -253,6 +351,39 @@ async function cargarDatos(){
       '2) que la hoja se llame exactamente <code>AUDITORÍAS</code>; 3) tu conexión a internet. '+
       'Si el problema persiste, avisa a Christian con este mensaje.';
     console.error(e);
+  }
+}
+
+async function cargarDefectos(){
+  try{
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_DEFECTOS)}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text = await res.text();
+    const m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);\s*$/);
+    if(!m) throw new Error('Formato de respuesta inesperado');
+    const json = JSON.parse(m[1]);
+    const rows = json.table.rows || [];
+    const val = (c, idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : null;
+    const strv = (c, idx) => { const v = val(c, idx); return v === null ? '' : String(v).trim(); };
+    const numv = (c, idx) => { const v = val(c, idx); const n = Number(v); return isNaN(n) ? 0 : n; };
+    DEF_ROWS = rows.map(r=>{
+      const c = r.c || [];
+      return {
+        idAuditoria: strv(c, DCOL.ID_AUDITORIA),
+        seccion: strv(c, DCOL.SECCION),
+        categoria: strv(c, DCOL.CATEGORIA),
+        subtipo: strv(c, DCOL.SUBTIPO),
+        cantidad: numv(c, DCOL.CANTIDAD) || 1
+      };
+    }).filter(r=>r.idAuditoria && r.categoria);
+    DEF_LOAD_OK = true;
+  }catch(e){
+    console.error('DEFECTOS no se pudo cargar:', e);
+    DEF_ROWS = [];
+    DEF_LOAD_OK = false;
+    const w = document.getElementById('defWarn');
+    if(w){ w.style.display='block'; w.innerHTML = '<b>⚠ No se pudo cargar el desglose de defectos.</b> El resto del dashboard funciona normal. Detalle: <code>'+(e&&e.message?e.message:e)+'</code>'; }
   }
 }
 
@@ -360,8 +491,134 @@ function render(mode, value){
       plugins:{legend:{position:'top', labels:{boxWidth:14, usePointStyle:true}}, tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+'%'}}},
       scales:{x:{grid:{display:false}, border:{color:WARM}}, y:{min:0, max:100, grid:{color:WARML}, border:{display:false}, ticks:{callback:v=>v+'%'}}}}}));
 
+  renderComparativo(wKeys);
+  renderProceso(wrows);
+  renderRanking();
+  renderDefectos(wrows);
+
   const hoy = new Date().toLocaleDateString('es-PE',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   document.getElementById('foot').innerHTML = 'Confidencial — Uso Interno · Calidad Manufactura LIVES · AC-009-25 en vivo · Vista generada el '+hoy;
+}
+
+/* ===================== Parte 2: comparativo, ranking, defectos ===================== */
+function estadoDe(p){return p>=95?['Excelente','exc']:p>=85?['Bueno','bue']:p>=70?['En revisión','rev']:p>=40?['Alerta','ale']:['Crítico','cri'];}
+
+function renderComparativo(wKeys){
+  const rateOf = (rows)=>{ const ap=rows.filter(r=>r.resultado==='APROBADO').length, re=rows.filter(r=>r.resultado==='RECHAZADO').length; return pct(re, ap+re); };
+  const rLive = wKeys.map(w=> rateOf(ROWS.filter(r=>r.semana===w && r.intext==='INTERNA')) );
+  const rTal  = wKeys.map(w=> rateOf(ROWS.filter(r=>r.semana===w && r.intext==='EXTERNA')) );
+  const rProm = wKeys.map(w=> rateOf(ROWS.filter(r=>r.semana===w)) );
+  reg(new Chart(document.getElementById('cCompSemanal'), {type:'line',
+    data:{labels:wKeys.map(w=>'Sem '+w), datasets:[
+      {label:'Rechazo LIVES', data:rLive, borderColor:ROSE, pointBackgroundColor:ROSE, pointRadius:4, tension:.3, borderWidth:2.5, fill:false},
+      {label:'Rechazo Talleres', data:rTal, borderColor:SAGE, pointBackgroundColor:SAGE, pointRadius:4, tension:.3, borderWidth:2.5, fill:false},
+      {label:'Promedio global', data:rProm, borderColor:'#F59E0B', pointBackgroundColor:'#F59E0B', pointRadius:3, tension:.3, borderWidth:2, borderDash:[6,4], fill:false}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top', labels:{boxWidth:14, usePointStyle:true}}, tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+'%'}}},
+      scales:{x:{grid:{display:false}, border:{color:WARM}}, y:{min:0, max:100, grid:{color:WARML}, border:{display:false}, ticks:{callback:v=>v+'%'}}}}}));
+}
+
+function renderProceso(wrows){
+  const groups={};
+  wrows.forEach(r=>{
+    const g = (r.nAuditoria==='1ra') ? '1ra auditoría' : '2da/3ra+ (repetida)';
+    groups[g] = groups[g] || {ap:0,re:0};
+    if(r.resultado==='APROBADO') groups[g].ap++; else if(r.resultado==='RECHAZADO') groups[g].re++;
+  });
+  const labels = Object.keys(groups);
+  document.getElementById('procSub').textContent = labels.length ? '% de resultados por número de auditoría (período seleccionado).' : 'Sin auditorías en este período.';
+  reg(new Chart(document.getElementById('cProceso'), {type:'bar',
+    data:{labels, datasets:[
+      {label:'Aprobado', data:labels.map(l=>groups[l].ap), backgroundColor:SAGE, stack:'s', borderRadius:2},
+      {label:'Rechazado', data:labels.map(l=>groups[l].re), backgroundColor:ROSE, stack:'s', borderRadius:2}
+    ]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top', labels:{boxWidth:14, usePointStyle:true}}},
+      scales:{x:{stacked:true, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{stacked:true, grid:{display:false}, border:{color:WARM}}}}}));
+}
+
+function renderRanking(){
+  document.getElementById('rankSub').textContent = 'Acumulado '+(YEARS[0]||'')+' · ordenado por menor % de aprobación primero. Clic en una fila para ver la ficha imprimible.';
+  const tallerRows = ROWS.filter(r=>r.intext==='EXTERNA'); // acumulado del año, no solo el período (ranking estable)
+  const m={};
+  tallerRows.forEach(r=>{
+    m[r.servicio] = m[r.servicio] || {ap:0,re:0};
+    if(r.resultado==='APROBADO') m[r.servicio].ap++; else if(r.resultado==='RECHAZADO') m[r.servicio].re++;
+  });
+  const list = Object.keys(m).map(k=>{
+    const o=m[k], n=o.ap+o.re, pctAp = n?+(o.ap/n*100).toFixed(1):0;
+    return {k,n,ap:o.ap,re:o.re,pctAp};
+  }).sort((a,b)=>a.pctAp-b.pctAp);
+  const body = document.getElementById('rankBody');
+  if(!list.length){ body.innerHTML = '<tr><td colspan="8" style="padding:14px;color:var(--stone);text-align:center;">Sin talleres externos registrados todavía.</td></tr>'; return; }
+  body.innerHTML = list.map((r,i)=>{
+    const [lbl,cls] = estadoDe(r.pctAp);
+    const kEsc = r.k.replace(/'/g,"\\'");
+    return `<tr class="rk-row" onclick="abrirFichaTaller('${kEsc}')">`+
+      `<td>${i+1}</td><td><b>${r.k}</b></td><td style="text-align:right">${r.n}</td>`+
+      `<td style="text-align:right;color:var(--sage)">${r.ap}</td><td style="text-align:right;color:var(--rose)">${r.re}</td>`+
+      `<td style="text-align:right;font-weight:700">${r.pctAp}%</td>`+
+      `<td style="text-align:center"><span class="st ${cls}">${lbl}</span></td>`+
+      `<td><button class="fbtn" type="button" onclick="event.stopPropagation();abrirFichaTaller('${kEsc}')">Ficha</button></td></tr>`;
+  }).join('');
+}
+
+function abrirFichaTaller(servicio){
+  const rows = ROWS.filter(r=>r.intext==='EXTERNA' && r.servicio===servicio);
+  const ap = rows.filter(r=>r.resultado==='APROBADO').length, re = rows.filter(r=>r.resultado==='RECHAZADO').length;
+  const n = ap+re, pctAp = n?+(ap/n*100).toFixed(1):0;
+  const [lbl,cls] = estadoDe(pctAp);
+  const headColor = (cls==='cri'||cls==='ale') ? '#DC2626' : (cls==='rev' ? '#B45309' : '#0E3B36');
+  let defsHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de defectos disponibles para este taller.</span>';
+  if(DEF_LOAD_OK && DEF_ROWS.length){
+    const ids = new Set(rows.map(r=>r.id));
+    const acc = {};
+    DEF_ROWS.filter(d=>ids.has(d.idAuditoria)).forEach(d=>{ acc[d.categoria]=(acc[d.categoria]||0)+d.cantidad; });
+    const top = Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,6);
+    if(top.length) defsHTML = top.map(x=>`<span class="d">${x.k} <b>${x.v}</b></span>`).join('');
+  }
+  const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('fichaCard').innerHTML =
+    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${servicio}</div><div class="tsub">Ficha de desempeño · Taller externo · acumulado ${YEARS[0]||''}</div></div><div class="tpct">${pctAp}%<small>${lbl}</small></div></div>`+
+    `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${n}</div><div class="l">Total Aud.</div></div><div class="k"><div class="v" style="color:var(--sage)">${ap}</div><div class="l">Aprobadas</div></div><div class="k"><div class="v" style="color:var(--rose)">${re}</div><div class="l">Rechazadas</div></div><div class="k"><div class="v">${pctAp}%</div><div class="l">% Aprobación</div></div></div>`+
+    `<div class="fc-sec">Defectos más frecuentes</div><div class="fc-defs">${defsHTML}</div>`+
+    `<div class="fc-note ${(cls==='cri'||cls==='ale')?'warn':''}">${servicio} tiene ${pctAp}% de aprobación acumulada (${n} auditorías). ${(cls==='cri'||cls==='ale')?'Por debajo del estándar de calidad LIVES — requiere seguimiento.':'Dentro del estándar de calidad.'}</div></div>`+
+    `<div class="fc-foot"><span>Confidencial — Uso Interno · Sistema de Calidad LIVES</span><span>AC-009-25 en vivo · Generado el ${hoy}</span></div>`;
+  document.getElementById('fichaOverlay').classList.add('show');
+  document.getElementById('fichaOverlay').scrollTop = 0;
+}
+
+function renderDefectos(wrows){
+  const warn = document.getElementById('defWarn');
+  if(!DEF_LOAD_OK){ warn.style.display='block'; return; } // mensaje ya seteado en cargarDefectos()
+  if(!DEF_ROWS.length){
+    warn.style.display='block';
+    warn.innerHTML = '<b>Sin datos</b> La hoja DEFECTOS respondió pero no tiene filas todavía. Puede ser normal si aún no se registraron defectos.';
+    return;
+  }
+  const idsLive = new Set(wrows.filter(r=>r.intext==='INTERNA').map(r=>r.id));
+  const idsTal  = new Set(wrows.filter(r=>r.intext==='EXTERNA').map(r=>r.id));
+  function top(ids){
+    const acc={};
+    DEF_ROWS.filter(d=>ids.has(d.idAuditoria)).forEach(d=>{ acc[d.categoria]=(acc[d.categoria]||0)+d.cantidad; });
+    return Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,8);
+  }
+  const tL = top(idsLive), tT = top(idsTal);
+  reg(new Chart(document.getElementById('cDefLives'), {type:'bar',
+    data:{labels:tL.map(x=>x.k), datasets:[{data:tL.map(x=>x.v), backgroundColor:ROSE, borderRadius:3}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
+  reg(new Chart(document.getElementById('cDefTalleres'), {type:'bar',
+    data:{labels:tT.map(x=>x.k), datasets:[{data:tT.map(x=>x.v), backgroundColor:SLATE, borderRadius:3}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
+  if(!tL.length && !tT.length){
+    warn.style.display='block';
+    warn.innerHTML = '<b>Sin defectos registrados</b> para las auditorías de este período.';
+  } else {
+    warn.style.display='none';
+  }
 }
 
 cargarDatos();
