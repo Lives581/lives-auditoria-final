@@ -43,6 +43,19 @@
   .note b{color:#333;}
   .note.warn{border-left-color:var(--rose);}
 
+  .ekpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}
+  @media(max-width:980px){.ekpis{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:560px){.ekpis{grid-template-columns:repeat(2,1fr);}}
+  .ekpi{background:#fff;border:1px solid var(--warm);border-radius:10px;padding:14px 12px;text-align:center;}
+  .ekpi.hero{background:var(--petrol);border-color:var(--petrol);}
+  .ekpi .v{font-size:24px;font-weight:800;color:var(--sage);line-height:1.05;}
+  .ekpi.hero .v{color:#fff;font-size:26px;}
+  .ekpi .l{font-size:10.5px;color:var(--stone);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+  .ekpi.hero .l{color:#BFE0D9;}
+  .ekpi .v.re{color:var(--rose);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;align-items:start;}
+  @media(max-width:900px){.row2{grid-template-columns:1fr;}}
+  .row2 .panel{margin-bottom:0;height:100%;}
   .kdual{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
   @media(max-width:760px){.kdual{grid-template-columns:1fr;}}
   .kpanel{background:#fff;border:1px solid var(--warm);border-radius:8px;padding:16px 18px;}
@@ -139,7 +152,17 @@
       <div class="note" id="srcNote"></div>
       <div class="note warn" id="dataWarn" style="display:none"></div>
 
-      <!-- KPIs duales -->
+      <!-- Resumen ejecutivo: lo primero que ve un gerente -->
+      <div class="ekpis">
+        <div class="ekpi hero"><div class="v" id="E_TOTAL">—</div><div class="l">Auditorías totales</div></div>
+        <div class="ekpi"><div class="v" id="E_AP">—</div><div class="l">% Aprobación global</div></div>
+        <div class="ekpi"><div class="v re" id="E_RE">—</div><div class="l">% Rechazo global</div></div>
+        <div class="ekpi"><div class="v" id="E_LOTE">—</div><div class="l">Lote total auditado</div></div>
+        <div class="ekpi"><div class="v" id="E_TALLERES">—</div><div class="l">Talleres activos</div></div>
+        <div class="ekpi"><div class="v" id="E_CLIENTES">—</div><div class="l">Clientes atendidos</div></div>
+      </div>
+
+      <!-- KPIs duales: LIVES vs Talleres -->
       <div class="kdual">
         <div class="kpanel">
           <div class="kh">🏭 LIVES — <span id="kwL">Sem</span></div>
@@ -169,28 +192,30 @@
         </div>
       </div>
 
-      <div class="panel">
-        <div class="pt">📈 Tendencia mensual</div>
-        <div class="ph" id="mSub">% de aprobación vs % de rechazo por mes (todo el año, LIVES + Talleres).</div>
-        <div class="cwrap"><canvas id="cMensual"></canvas></div>
+      <div class="row2">
+        <div class="panel">
+          <div class="pt">📈 Tendencia mensual</div>
+          <div class="ph" id="mSub">% de aprobación vs % de rechazo por mes (todo el año, LIVES + Talleres).</div>
+          <div class="cwrap" style="height:230px;"><canvas id="cMensual"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="pt">📈 Tendencia semanal</div>
+          <div class="ph" id="wSub">% de aprobación vs % de rechazo de las últimas semanas.</div>
+          <div class="cwrap" style="height:230px;"><canvas id="cSemanal"></canvas></div>
+        </div>
       </div>
 
-      <div class="panel">
-        <div class="pt">📈 Tendencia semanal</div>
-        <div class="ph" id="wSub">% de aprobación vs % de rechazo de las últimas semanas.</div>
-        <div class="cwrap"><canvas id="cSemanal"></canvas></div>
-      </div>
-
-      <div class="panel">
-        <div class="pt">⚖️ Tendencia semanal — LIVES vs Talleres vs Promedio</div>
-        <div class="ph">% de rechazo de las últimas semanas hasta la seleccionada. "Promedio" = rechazo global de la semana.</div>
-        <div class="cwrap"><canvas id="cCompSemanal"></canvas></div>
-      </div>
-
-      <div class="panel">
-        <div class="pt">📋 Resultados por proceso (1ra vs 2da/3ra auditoría)</div>
-        <div class="ph" id="procSub">% de resultados por número de auditoría (período seleccionado).</div>
-        <div class="cwrap" style="height:220px;"><canvas id="cProceso"></canvas></div>
+      <div class="row2">
+        <div class="panel">
+          <div class="pt">⚖️ LIVES vs Talleres vs Promedio</div>
+          <div class="ph">% de rechazo semanal hasta la seleccionada.</div>
+          <div class="cwrap" style="height:230px;"><canvas id="cCompSemanal"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="pt">📋 Resultados por proceso</div>
+          <div class="ph" id="procSub">1ra auditoría vs 2da/3ra (repetida) — período seleccionado.</div>
+          <div class="cwrap" style="height:230px;"><canvas id="cProceso"></canvas></div>
+        </div>
       </div>
 
       <div class="panel">
@@ -212,23 +237,24 @@
         </div>
       </div>
 
-      <div class="panel">
-        <div class="pt">🔍 Defectos por origen</div>
-        <div class="ph" id="defSub">Incidencias por categoría madre de defecto — hallados en la <b>muestra</b> auditada (período seleccionado).</div>
-        <div class="note" id="defWarn" style="display:none;font-size:11px;"></div>
-        <div class="grid2">
-          <div><div style="font-weight:700;color:var(--sage);font-size:12.5px;margin-bottom:8px;">🏭 LIVES</div><div class="cwrap" id="wrapDefL" style="height:240px;"><canvas id="cDefLives"></canvas></div></div>
-          <div><div style="font-weight:700;color:var(--slate);font-size:12.5px;margin-bottom:8px;">🏗 TALLERES</div><div class="cwrap" id="wrapDefT" style="height:240px;"><canvas id="cDefTalleres"></canvas></div></div>
+      <div class="row2">
+        <div class="panel">
+          <div class="pt">🔍 Defectos por origen</div>
+          <div class="ph" id="defSub">Categoría madre — hallados en la <b>muestra</b> (período seleccionado).</div>
+          <div class="note" id="defWarn" style="display:none;font-size:11px;"></div>
+          <div style="margin-bottom:6px;font-weight:700;color:var(--sage);font-size:11.5px;">🏭 LIVES</div>
+          <div class="cwrap" id="wrapDefL" style="height:170px;"><canvas id="cDefLives"></canvas></div>
+          <div style="margin:12px 0 6px;font-weight:700;color:var(--slate);font-size:11.5px;">🏗 TALLERES</div>
+          <div class="cwrap" id="wrapDefT" style="height:170px;"><canvas id="cDefTalleres"></canvas></div>
         </div>
-      </div>
-
-      <div class="panel">
-        <div class="pt">📦 Derivados por origen</div>
-        <div class="ph" id="derSub">Incidencias por categoría madre — hallados al revisar el <b>lote completo</b> (no la muestra). Período seleccionado.</div>
-        <div class="note" id="derWarn" style="display:none;font-size:11px;"></div>
-        <div class="grid2">
-          <div><div style="font-weight:700;color:var(--sage);font-size:12.5px;margin-bottom:8px;">🏭 LIVES</div><div class="cwrap" id="wrapDerL" style="height:240px;"><canvas id="cDerLives"></canvas></div></div>
-          <div><div style="font-weight:700;color:var(--slate);font-size:12.5px;margin-bottom:8px;">🏗 TALLERES</div><div class="cwrap" id="wrapDerT" style="height:240px;"><canvas id="cDerTalleres"></canvas></div></div>
+        <div class="panel">
+          <div class="pt">📦 Derivados por origen</div>
+          <div class="ph" id="derSub">Categoría madre — hallados en el <b>lote completo</b> (período seleccionado).</div>
+          <div class="note" id="derWarn" style="display:none;font-size:11px;"></div>
+          <div style="margin-bottom:6px;font-weight:700;color:var(--sage);font-size:11.5px;">🏭 LIVES</div>
+          <div class="cwrap" id="wrapDerL" style="height:170px;"><canvas id="cDerLives"></canvas></div>
+          <div style="margin:12px 0 6px;font-weight:700;color:var(--slate);font-size:11.5px;">🏗 TALLERES</div>
+          <div class="cwrap" id="wrapDerT" style="height:170px;"><canvas id="cDerTalleres"></canvas></div>
         </div>
       </div>
 
@@ -450,7 +476,7 @@ function kpiFor(rows, prefix, label){
   document.getElementById(prefix+'_re').textContent = nf(re);
   document.getElementById(prefix+'_pr').textContent = rePct+'%';
   document.getElementById('kw'+(prefix==='L'?'L':'T')).textContent = label;
-  return {ap, re};
+  return {ap, re, lote, n:rows.length};
 }
 
 function render(mode, value){
@@ -469,6 +495,19 @@ function render(mode, value){
 
   const L = kpiFor(liveRows, 'L', plabel);
   const T = kpiFor(tallerRows, 'T', plabel);
+
+  // Resumen ejecutivo (LIVES + Talleres combinado) — lo primero que ve un gerente
+  const totalAud = L.n + T.n;
+  const totalAp = L.ap + T.ap, totalRe = L.re + T.re;
+  const totalLote = L.lote + T.lote;
+  const talleresActivos = new Set(tallerRows.map(r=>r.servicio).filter(Boolean)).size;
+  const clientesAtendidos = new Set(wrows.map(r=>r.cliente).filter(Boolean)).size;
+  document.getElementById('E_TOTAL').textContent = nf(totalAud);
+  document.getElementById('E_AP').textContent = pct(totalAp, totalAp+totalRe)+'%';
+  document.getElementById('E_RE').textContent = pct(totalRe, totalAp+totalRe)+'%';
+  document.getElementById('E_LOTE').textContent = nf(totalLote);
+  document.getElementById('E_TALLERES').textContent = nf(talleresActivos);
+  document.getElementById('E_CLIENTES').textContent = nf(clientesAtendidos);
 
   reg(new Chart(document.getElementById('dL'), {type:'doughnut',
     data:{labels:['Aprobado','Rechazado'], datasets:[{data:[L.ap,L.re], backgroundColor:[SAGE,ROSE], borderWidth:0}]},
@@ -561,12 +600,12 @@ function renderProceso(wrows){
   document.getElementById('procSub').textContent = labels.length ? '% de resultados por número de auditoría (período seleccionado).' : 'Sin auditorías en este período.';
   reg(new Chart(document.getElementById('cProceso'), {type:'bar',
     data:{labels, datasets:[
-      {label:'Aprobado', data:labels.map(l=>groups[l].ap), backgroundColor:SAGE, stack:'s', borderRadius:2},
-      {label:'Rechazado', data:labels.map(l=>groups[l].re), backgroundColor:ROSE, stack:'s', borderRadius:2}
+      {label:'Aprobado', data:labels.map(l=>groups[l].ap), backgroundColor:SAGE, stack:'s', borderRadius:4, maxBarThickness:70},
+      {label:'Rechazado', data:labels.map(l=>groups[l].re), backgroundColor:ROSE, stack:'s', borderRadius:4, maxBarThickness:70}
     ]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    options:{responsive:true, maintainAspectRatio:false,
       plugins:{legend:{position:'top', labels:{boxWidth:14, usePointStyle:true}}},
-      scales:{x:{stacked:true, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{stacked:true, grid:{display:false}, border:{color:WARM}}}}}));
+      scales:{y:{stacked:true, min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, x:{stacked:true, grid:{display:false}, border:{color:WARM}}}}}));
 }
 
 function renderRanking(){
