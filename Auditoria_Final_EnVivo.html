@@ -39,6 +39,13 @@
   .livebadge .dot{width:7px;height:7px;border-radius:50%;background:var(--emer);animation:pulse 1.6s ease-in-out infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 
+  .clifilter{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--warm-light);}
+  .clifilter-lbl{font-size:12.5px;font-weight:700;color:var(--stone);padding-top:6px;flex-shrink:0;}
+  .clibtns{display:flex;flex-wrap:wrap;gap:8px;}
+  .clibtn{background:#fff;border:1.5px solid var(--warm);color:#333;border-radius:20px;padding:6px 15px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:.12s;}
+  .clibtn:hover{border-color:var(--sage);color:var(--sage-dark);}
+  .clibtn.active{background:var(--sage);border-color:var(--sage);color:#fff;}
+
   .note{background:#fff;border:1px solid var(--warm);border-left:4px solid var(--tan);border-radius:6px;padding:10px 14px;font-size:11.5px;color:var(--stone);margin-bottom:18px;line-height:1.5;}
   .note b{color:#333;}
   .note.warn{border-left-color:var(--rose);}
@@ -70,6 +77,16 @@
   .donutwrap{display:flex;align-items:center;gap:10px;margin-top:8px;}
   .donutwrap .dc{position:relative;width:96px;height:96px;flex:none;}
   .donutwrap .dleg{font-size:11.5px;color:var(--stone);}
+
+  .hbar-row{display:grid;grid-template-columns:132px 1fr 38px;align-items:center;gap:10px;margin:7px 0;cursor:pointer;padding:2px 4px;border-radius:5px;}
+  .hbar-row:hover{background:var(--warm-light);}
+  .hbar-label{font-size:12px;color:#333;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .hbar-row:hover .hbar-label{color:var(--sage-dark);}
+  .hbar-track{background:var(--warm-light);border-radius:5px;height:15px;overflow:hidden;}
+  .hbar-fill{height:100%;border-radius:5px;min-width:4px;}
+  .hbar-val{font-size:11.5px;font-weight:700;color:var(--stone);text-align:right;}
+  .hbar-empty{font-size:11.5px;color:var(--stone);padding:10px 4px;font-style:italic;}
+  .hbar-side-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin:14px 0 6px;display:flex;align-items:center;gap:6px;}
   .donutwrap .dleg b{font-size:20px;color:var(--rose);display:block;line-height:1.1;}
   .donutwrap .dleg .dl2{color:#333;}
 
@@ -95,7 +112,7 @@
   .ficha-card{max-width:720px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 10px 50px rgba(0,0,0,.35);}
   .ficha-actions{max-width:720px;margin:14px auto 0;display:flex;gap:10px;justify-content:center;}
   .ficha-actions .btn{background:var(--sage);color:#fff;border:none;border-radius:6px;padding:9px 18px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
-  .ficha-actions .btn.ghost{background:#fff;border:1px solid #fff;color:#fff;}
+  .ficha-actions .btn.ghost{background:rgba(255,255,255,.12);border:1px solid #fff;color:#fff;}
   .fc-hd{padding:18px 24px;color:#fff;background:var(--petrol);display:flex;justify-content:space-between;align-items:center;}
   .fc-hd .co{font-size:10px;letter-spacing:2px;opacity:.85;text-transform:uppercase;}
   .fc-hd .tn{font-size:22px;font-weight:700;line-height:1.1;}
@@ -113,6 +130,8 @@
   .fc-note{border-left:3px solid var(--sage);background:var(--warm-light);border-radius:0 6px 6px 0;padding:9px 13px;font-size:12px;color:#333;margin-top:10px;line-height:1.5;}
   .fc-note.warn{border-left-color:var(--rose);}
   .fc-foot{background:var(--warm-light);padding:10px 24px;font-size:10px;color:var(--stone);display:flex;justify-content:space-between;}
+  .ficha-topbar{max-width:720px;margin:0 auto 10px;display:flex;align-items:center;gap:10px;justify-content:center;color:#fff;font-size:13px;font-weight:600;}
+  .ficha-topbar select{font-family:inherit;font-size:13px;font-weight:700;color:var(--sage);border:none;border-radius:6px;padding:6px 12px;background:#fff;cursor:pointer;}
   @media print{
     @page{size:A4 portrait;margin:11mm;}
     body.print-ficha .header,body.print-ficha .wrap{display:none!important;}
@@ -146,6 +165,11 @@
       </span>
       <span class="wsel" id="weekWrap">Semana: <select id="weekSel"></select></span>
       <span class="wsel" id="monthWrap" style="display:none">Mes: <select id="monthSel"></select></span>
+    </div>
+
+    <div id="cliFilterWrap" class="clifilter" style="display:none">
+      <span class="clifilter-lbl">Cliente:</span>
+      <div id="cliFilterBar" class="clibtns"></div>
     </div>
 
     <div id="dash">
@@ -240,29 +264,29 @@
       <div class="row2">
         <div class="panel">
           <div class="pt">🔍 Defectos por origen</div>
-          <div class="ph" id="defSub">Categoría madre — hallados en la <b>muestra</b> (período seleccionado).</div>
+          <div class="ph" id="defSub">Categoría madre — hallados en la <b>muestra</b> (período seleccionado). Clic en una fila para ver los subtipos.</div>
           <div class="note" id="defWarn" style="display:none;font-size:11px;"></div>
-          <div style="margin-bottom:6px;font-weight:700;color:var(--sage);font-size:11.5px;">🏭 LIVES</div>
-          <div class="cwrap" id="wrapDefL" style="height:170px;"><canvas id="cDefLives"></canvas></div>
-          <div style="margin:12px 0 6px;font-weight:700;color:var(--slate);font-size:11.5px;">🏗 TALLERES</div>
-          <div class="cwrap" id="wrapDefT" style="height:170px;"><canvas id="cDefTalleres"></canvas></div>
+          <div class="hbar-side-title" style="color:var(--sage)">🏭 LIVES</div>
+          <div id="listDefL"></div>
+          <div class="hbar-side-title" style="color:var(--slate)">🏗 TALLERES</div>
+          <div id="listDefT"></div>
         </div>
         <div class="panel">
           <div class="pt">📦 Derivados por origen</div>
-          <div class="ph" id="derSub">Categoría madre — hallados en el <b>lote completo</b> (período seleccionado).</div>
+          <div class="ph" id="derSub">Categoría madre — hallados en el <b>lote completo</b> (período seleccionado). Clic en una fila para ver los subtipos.</div>
           <div class="note" id="derWarn" style="display:none;font-size:11px;"></div>
-          <div style="margin-bottom:6px;font-weight:700;color:var(--sage);font-size:11.5px;">🏭 LIVES</div>
-          <div class="cwrap" id="wrapDerL" style="height:170px;"><canvas id="cDerLives"></canvas></div>
-          <div style="margin:12px 0 6px;font-weight:700;color:var(--slate);font-size:11.5px;">🏗 TALLERES</div>
-          <div class="cwrap" id="wrapDerT" style="height:170px;"><canvas id="cDerTalleres"></canvas></div>
+          <div class="hbar-side-title" style="color:var(--sage)">🏭 LIVES</div>
+          <div id="listDerL"></div>
+          <div class="hbar-side-title" style="color:var(--slate)">🏗 TALLERES</div>
+          <div id="listDerT"></div>
         </div>
       </div>
 
       <div class="panel">
         <div class="pt">👔 % de rechazo por cliente</div>
-        <div class="ph" id="cliSub">Clientes con mayor % de rechazo en el período (mín. 3 auditorías). Clic en la barra para ver la ficha.</div>
+        <div class="ph" id="cliSub">Clientes con mayor % de rechazo en el período (mín. 3 auditorías). Clic en una fila para ver la ficha.</div>
         <div class="note" id="cliWarn" style="display:none;font-size:11px;"></div>
-        <div class="cwrap" id="wrapCli" style="height:260px;"><canvas id="cCliRej"></canvas></div>
+        <div id="listCli"></div>
       </div>
 
       <div class="foot" id="foot"></div>
@@ -270,6 +294,10 @@
   </div>
 
   <div id="fichaOverlay" class="ficha-overlay">
+    <div class="ficha-topbar no-print" id="fichaTopbar">
+      <span>Período:</span>
+      <select id="fichaPeriodSel" onchange="cambiarPeriodoFicha(this.value)"></select>
+    </div>
     <div class="ficha-card" id="fichaCard"></div>
     <div class="ficha-actions no-print">
       <button class="btn" type="button" onclick="window.print()">🖨 Imprimir</button>
@@ -302,10 +330,40 @@ const COL = {
 const SAGE='#0F7A5A', ROSE='#DC2626', WARM='#DCE5E2', WARML='#F1F6F4', SLATE='#4E6B78', TAN='#F59E0B', TAUPE='#B45309';
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-let ROWS=[];       // TODAS las auditorías (ya no se filtra por COMPUTABLE — ver nota en cargarDatos)
+let ROWS=[];       // vista ACTIVA (ya filtrada por cliente si hay uno seleccionado) — todo el dashboard lee de aquí
+let ROWS_ALL=[];    // TODAS las auditorías sin filtrar por cliente (fuente de verdad; ya no se filtra por COMPUTABLE — ver nota en cargarDatos)
+let CURCLI=null;    // cliente activo en el filtro superior, o null = todos
 let OTHER_RES=0;   // filas con RESULTADO_FINAL fuera de APROBADO/RECHAZADO
 let YEARS=[], WEEKS=[], MONTHS=[];
 let CURMODE='week', CURVAL=null;
+let STATE_wrows=[]; // filas del período activo — usado por los onclick de las listas HTML (Defectos/Derivados)
+let CURRENT_FICHA=null; // recuerda qué ficha está abierta, para poder recalcularla si cambia el período dentro de la ficha
+
+function curTok(){ return CURMODE==='month' ? ('m:'+CURVAL) : ('w:'+CURVAL); }
+function periodRows(period){
+  if(!period || period==='acum') return ROWS;
+  if(period.indexOf('w:')===0) return ROWS.filter(r=>r.semana===+period.slice(2));
+  if(period.indexOf('m:')===0) return ROWS.filter(r=>r.mes===+period.slice(2));
+  return ROWS;
+}
+function periodLabel(period){
+  if(!period || period==='acum') return 'Acumulado '+(YEARS[0]||'');
+  if(period.indexOf('w:')===0) return 'Semana '+period.slice(2);
+  if(period.indexOf('m:')===0) return MESES[+period.slice(2)]+' '+(YEARS[0]||'');
+  return '';
+}
+function periodOptionsHTML(current){
+  let h = '<option value="acum"'+(current==='acum'?' selected':'')+'>Acumulado '+(YEARS[0]||'')+'</option>';
+  h += '<optgroup label="Por mes">'+MONTHS.map(m=>'<option value="m:'+m+'"'+(current==='m:'+m?' selected':'')+'>'+MESES[m]+' '+(YEARS[0]||'')+'</option>').join('')+'</optgroup>';
+  h += '<optgroup label="Por semana">'+WEEKS.map(w=>'<option value="w:'+w+'"'+(current==='w:'+w?' selected':'')+'>Semana '+w+'</option>').join('')+'</optgroup>';
+  return h;
+}
+function cambiarPeriodoFicha(period){
+  if(!CURRENT_FICHA) return;
+  if(CURRENT_FICHA.type==='taller') abrirFichaTaller(CURRENT_FICHA.servicio, period);
+  else if(CURRENT_FICHA.type==='cliente') abrirFichaCliente(CURRENT_FICHA.cliente, period);
+  else if(CURRENT_FICHA.type==='categoria') abrirFichaCategoria(CURRENT_FICHA.tipo, CURRENT_FICHA.origen, CURRENT_FICHA.categoria, period);
+}
 let CHARTS=[];
 
 function reg(c){CHARTS.push(c);return c;}
@@ -370,6 +428,7 @@ async function cargarDatos(){
     // filas cuyo resultado no es APROBADO/RECHAZADO (transparencia, no se descartan del total)
     OTHER_RES = all.filter(r => r.resultado !== 'APROBADO' && r.resultado !== 'RECHAZADO').length;
 
+    ROWS_ALL = all;
     ROWS = all;
     YEARS = [...new Set(all.map(r=>r.anio))].sort((a,b)=>b-a);
     const latestYear = YEARS[0];
@@ -390,6 +449,7 @@ async function cargarDatos(){
     }
 
     poblarSelectores(latestYear);
+    poblarClientes();
     await cargarDefectosYDerivados(); // no bloqueante para el resto: si falla, el dashboard sigue funcionando
     setMode('week');
   }catch(e){
@@ -458,6 +518,25 @@ function poblarSelectores(year){
   mSel.onchange = ()=>render('month', +mSel.value);
 }
 
+function poblarClientes(){
+  const clientes = [...new Set(ROWS_ALL.map(r=>r.cliente).filter(Boolean))].sort();
+  const wrap = document.getElementById('cliFilterWrap');
+  if(!clientes.length){ wrap.style.display='none'; return; }
+  wrap.style.display='flex';
+  const bar = document.getElementById('cliFilterBar');
+  bar.innerHTML = '<button class="clibtn active" type="button" data-cli="" onclick="setCliente(null)">Todos</button>' +
+    clientes.map(c=>`<button class="clibtn" type="button" data-cli="${c.replace(/"/g,'&quot;')}" onclick="setCliente('${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');
+}
+
+function setCliente(cliente){
+  CURCLI = cliente || null;
+  ROWS = CURCLI ? ROWS_ALL.filter(r=>r.cliente===CURCLI) : ROWS_ALL;
+  document.querySelectorAll('#cliFilterBar .clibtn').forEach(b=>{
+    b.classList.toggle('active', (b.getAttribute('data-cli')||null) === (CURCLI||null));
+  });
+  render(CURMODE, CURVAL);
+}
+
 function setMode(m){
   CURMODE = m;
   document.getElementById('modeWeek').classList.toggle('active', m==='week');
@@ -488,10 +567,11 @@ function render(mode, value){
   CURMODE=mode; CURVAL=value;
   const isMonth = mode==='month';
   const wrows = isMonth ? ROWS.filter(r=>r.mes===value) : ROWS.filter(r=>r.semana===value);
+  STATE_wrows = wrows;
   const plabel = isMonth ? (MESES[value]+' '+YEARS[0]) : ('Sem '+value);
 
   document.getElementById('srcNote').innerHTML =
-    `<b>Fuente:</b> AC-009-25 (en vivo) · Año <b>${YEARS[0]}</b> · ${isMonth?'Mes: '+MESES[value]:'Semana '+value} · `+
+    `<b>Fuente:</b> AC-009-25 (en vivo) · Año <b>${YEARS[0]}</b> · ${isMonth?'Mes: '+MESES[value]:'Semana '+value}${CURCLI?' · Cliente: <b>'+CURCLI+'</b>':''} · `+
     `Se cuentan todas las auditorías registradas · Lote/Muestra auditados usan columnas ya deduplicadas por el Sheet (no se inflan por reprocesos) · Tasas = RECHAZADAS / (APROBADAS+RECHAZADAS).`;
 
   const liveRows = wrows.filter(r=>r.intext==='INTERNA');
@@ -638,13 +718,16 @@ function renderRanking(){
   }).join('');
 }
 
-function abrirFichaTaller(servicio){
-  const rows = ROWS.filter(r=>r.intext==='EXTERNA' && r.servicio===servicio);
+function abrirFichaTaller(servicio, period){
+  period = period || 'acum';
+  CURRENT_FICHA = {type:'taller', servicio};
+  const plabel = periodLabel(period);
+  const rows = periodRows(period).filter(r=>r.intext==='EXTERNA' && r.servicio===servicio);
   const ap = rows.filter(r=>r.resultado==='APROBADO').length, re = rows.filter(r=>r.resultado==='RECHAZADO').length;
   const n = ap+re, pctAp = n?+(ap/n*100).toFixed(1):0;
   const [lbl,cls] = estadoDe(pctAp);
   const headColor = (cls==='cri'||cls==='ale') ? '#DC2626' : (cls==='rev' ? '#B45309' : '#0E3B36');
-  let defsHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de defectos disponibles para este taller.</span>';
+  let defsHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de defectos disponibles para este taller en el período.</span>';
   if(DEF_LOAD_OK && DEF_ROWS.length){
     const ids = new Set(rows.map(r=>r.id));
     const acc = {};
@@ -652,7 +735,7 @@ function abrirFichaTaller(servicio){
     const top = Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,6);
     if(top.length) defsHTML = top.map(x=>`<span class="d">${x.k} <b>${x.v}</b></span>`).join('');
   }
-  let dersHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de derivados disponibles para este taller.</span>';
+  let dersHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de derivados disponibles para este taller en el período.</span>';
   if(DER_LOAD_OK && DER_ROWS.length){
     const ids = new Set(rows.map(r=>r.id));
     const acc = {};
@@ -662,14 +745,28 @@ function abrirFichaTaller(servicio){
   }
   const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('fichaCard').innerHTML =
-    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${servicio}</div><div class="tsub">Ficha de desempeño · Taller externo · acumulado ${YEARS[0]||''}</div></div><div class="tpct">${pctAp}%<small>${lbl}</small></div></div>`+
+    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${servicio}</div><div class="tsub">Ficha de desempeño · Taller externo · ${plabel}</div></div><div class="tpct">${pctAp}%<small>${n?lbl:'Sin datos'}</small></div></div>`+
     `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${n}</div><div class="l">Total Aud.</div></div><div class="k"><div class="v" style="color:var(--sage)">${ap}</div><div class="l">Aprobadas</div></div><div class="k"><div class="v" style="color:var(--rose)">${re}</div><div class="l">Rechazadas</div></div><div class="k"><div class="v">${pctAp}%</div><div class="l">% Aprobación</div></div></div>`+
     `<div class="fc-sec">Defectos más frecuentes (muestra)</div><div class="fc-defs">${defsHTML}</div>`+
     `<div class="fc-sec">Derivados más frecuentes (lote completo)</div><div class="fc-defs">${dersHTML}</div>`+
-    `<div class="fc-note ${(cls==='cri'||cls==='ale')?'warn':''}">${servicio} tiene ${pctAp}% de aprobación acumulada (${n} auditorías). ${(cls==='cri'||cls==='ale')?'Por debajo del estándar de calidad LIVES — requiere seguimiento.':'Dentro del estándar de calidad.'}</div></div>`+
+    `<div class="fc-note ${(cls==='cri'||cls==='ale')?'warn':''}">${servicio} tiene ${pctAp}% de aprobación en ${plabel.toLowerCase()} (${n} auditorías). ${n===0?'Sin auditorías en este período.':((cls==='cri'||cls==='ale')?'Por debajo del estándar de calidad LIVES — requiere seguimiento.':'Dentro del estándar de calidad.')}</div></div>`+
     `<div class="fc-foot"><span>Confidencial — Uso Interno · Sistema de Calidad LIVES</span><span>AC-009-25 en vivo · Generado el ${hoy}</span></div>`;
+  document.getElementById('fichaPeriodSel').innerHTML = periodOptionsHTML(period);
   document.getElementById('fichaOverlay').classList.add('show');
   document.getElementById('fichaOverlay').scrollTop = 0;
+}
+
+function hbarListHTML(list, color, onClickAttr){
+  if(!list.length) return '<div class="hbar-empty">Sin registros en este período.</div>';
+  const max = Math.max(...list.map(x=>x.v));
+  return list.map(x=>{
+    const w = Math.max(4, Math.round(x.v/max*100));
+    const esc = String(x.k).replace(/'/g,"\\'");
+    return `<div class="hbar-row" onclick="${onClickAttr}('${esc}')">`+
+      `<div class="hbar-label" title="${x.k}">${x.k}</div>`+
+      `<div class="hbar-track"><div class="hbar-fill" style="width:${w}%;background:${color}"></div></div>`+
+      `<div class="hbar-val">${x.v}</div></div>`;
+  }).join('');
 }
 
 function renderDefectos(wrows){
@@ -678,6 +775,7 @@ function renderDefectos(wrows){
   if(!DEF_ROWS.length){
     warn.style.display='block';
     warn.innerHTML = '<b>Sin datos</b> La hoja DEFECTOS respondió pero no tiene filas todavía. Puede ser normal si aún no se registraron defectos.';
+    document.getElementById('listDefL').innerHTML=''; document.getElementById('listDefT').innerHTML='';
     return;
   }
   const idsLive = new Set(wrows.filter(r=>r.intext==='INTERNA').map(r=>r.id));
@@ -685,21 +783,11 @@ function renderDefectos(wrows){
   function top(ids){
     const acc={};
     DEF_ROWS.filter(d=>ids.has(d.idAuditoria)).forEach(d=>{ acc[d.categoria]=(acc[d.categoria]||0)+d.cantidad; });
-    return Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,8);
+    return Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,7);
   }
   const tL = top(idsLive), tT = top(idsTal);
-  reg(new Chart(document.getElementById('cDefLives'), {type:'bar',
-    data:{labels:tL.map(x=>x.k), datasets:[{data:tL.map(x=>x.v), backgroundColor:ROSE, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
-      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DEF_ROWS, idsLive, tL[els[0].index].k, 'Defecto', 'LIVES'); },
-      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
-      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
-  reg(new Chart(document.getElementById('cDefTalleres'), {type:'bar',
-    data:{labels:tT.map(x=>x.k), datasets:[{data:tT.map(x=>x.v), backgroundColor:SLATE, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
-      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DEF_ROWS, idsTal, tT[els[0].index].k, 'Defecto', 'Talleres'); },
-      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
-      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
+  document.getElementById('listDefL').innerHTML = hbarListHTML(tL, ROSE, 'clicDefL');
+  document.getElementById('listDefT').innerHTML = hbarListHTML(tT, SLATE, 'clicDefT');
   if(!tL.length && !tT.length){
     warn.style.display='block';
     warn.innerHTML = '<b>Sin defectos registrados</b> para las auditorías de este período.';
@@ -707,6 +795,8 @@ function renderDefectos(wrows){
     warn.style.display='none';
   }
 }
+function clicDefL(k){ abrirFichaCategoria('Defecto','LIVES', k, curTok()); }
+function clicDefT(k){ abrirFichaCategoria('Defecto','Talleres', k, curTok()); }
 
 function renderDerivados(wrows){
   const warn = document.getElementById('derWarn');
@@ -714,6 +804,7 @@ function renderDerivados(wrows){
   if(!DER_ROWS.length){
     warn.style.display='block';
     warn.innerHTML = '<b>Sin datos</b> La hoja DERIVADOS respondió pero no tiene filas todavía. Puede ser normal si aún no se registraron derivados en este período.';
+    document.getElementById('listDerL').innerHTML=''; document.getElementById('listDerT').innerHTML='';
     return;
   }
   const idsLive = new Set(wrows.filter(r=>r.intext==='INTERNA').map(r=>r.id));
@@ -721,21 +812,11 @@ function renderDerivados(wrows){
   function top(ids){
     const acc={};
     DER_ROWS.filter(d=>ids.has(d.idAuditoria)).forEach(d=>{ acc[d.categoria]=(acc[d.categoria]||0)+d.cantidad; });
-    return Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,8);
+    return Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,7);
   }
   const tL = top(idsLive), tT = top(idsTal);
-  reg(new Chart(document.getElementById('cDerLives'), {type:'bar',
-    data:{labels:tL.map(x=>x.k), datasets:[{data:tL.map(x=>x.v), backgroundColor:TAN, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
-      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DER_ROWS, idsLive, tL[els[0].index].k, 'Derivado', 'LIVES'); },
-      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
-      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
-  reg(new Chart(document.getElementById('cDerTalleres'), {type:'bar',
-    data:{labels:tT.map(x=>x.k), datasets:[{data:tT.map(x=>x.v), backgroundColor:TAUPE, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
-      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DER_ROWS, idsTal, tT[els[0].index].k, 'Derivado', 'Talleres'); },
-      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
-      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
+  document.getElementById('listDerL').innerHTML = hbarListHTML(tL, TAN, 'clicDerL');
+  document.getElementById('listDerT').innerHTML = hbarListHTML(tT, TAUPE, 'clicDerT');
   if(!tL.length && !tT.length){
     warn.style.display='block';
     warn.innerHTML = '<b>Sin derivados registrados</b> para las auditorías de este período.';
@@ -743,8 +824,16 @@ function renderDerivados(wrows){
     warn.style.display='none';
   }
 }
+function clicDerL(k){ abrirFichaCategoria('Derivado','LIVES', k, curTok()); }
+function clicDerT(k){ abrirFichaCategoria('Derivado','Talleres', k, curTok()); }
 
-function abrirFichaCategoria(sourceRows, idsSet, categoria, tipo, origenLabel){
+function abrirFichaCategoria(tipo, origen, categoria, period){
+  period = period || curTok();
+  CURRENT_FICHA = {type:'categoria', tipo, origen, categoria};
+  const plabel = periodLabel(period);
+  const sourceRows = tipo==='Defecto' ? DEF_ROWS : DER_ROWS;
+  const intextVal = origen==='LIVES' ? 'INTERNA' : 'EXTERNA';
+  const idsSet = new Set(periodRows(period).filter(r=>r.intext===intextVal).map(r=>r.id));
   const rows = sourceRows.filter(d => idsSet.has(d.idAuditoria) && d.categoria===categoria);
   const total = rows.reduce((s,r)=>s+r.cantidad,0);
   const auditsAfectadas = new Set(rows.map(r=>r.idAuditoria)).size;
@@ -764,11 +853,12 @@ function abrirFichaCategoria(sourceRows, idsSet, categoria, tipo, origenLabel){
   const sinSubtipo = subList.length===1 && subList[0].k==='(sin subtipo especificado)';
   const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('fichaCard').innerHTML =
-    `<div class="fc-hd" style="background:${tipo==='Defecto'?'#DC2626':'#B45309'}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${categoria}</div><div class="tsub">${tipo} · ${origenLabel} · desglose por subtipo · período seleccionado</div></div><div class="tpct">${total}<small>incidencias</small></div></div>`+
-    `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${total}</div><div class="l">Incidencias</div></div><div class="k"><div class="v">${auditsAfectadas}</div><div class="l">Auditorías afectadas</div></div><div class="k"><div class="v" style="font-size:13px">${origenLabel}</div><div class="l">Origen</div></div><div class="k"><div class="v" style="font-size:13px">${tipo}</div><div class="l">Tipo</div></div></div>`+
+    `<div class="fc-hd" style="background:${tipo==='Defecto'?'#DC2626':'#B45309'}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${categoria}</div><div class="tsub">${tipo} · ${origen} · desglose por subtipo · ${plabel}</div></div><div class="tpct">${total}<small>incidencias</small></div></div>`+
+    `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${total}</div><div class="l">Incidencias</div></div><div class="k"><div class="v">${auditsAfectadas}</div><div class="l">Auditorías afectadas</div></div><div class="k"><div class="v" style="font-size:13px">${origen}</div><div class="l">Origen</div></div><div class="k"><div class="v" style="font-size:13px">${tipo}</div><div class="l">Tipo</div></div></div>`+
     `<div class="fc-sec">Desglose por subtipo</div><div>${barsHTML}</div>`+
-    (sinSubtipo ? `<div class="fc-note warn">El formulario aún no está capturando el SUBTIPO para estos registros — por eso no se puede desglosar más. Vale la pena revisarlo con el equipo de auditoría si quieren tomar decisiones a este nivel de detalle.</div>` : `<div class="fc-note">Usa este desglose para decidir la acción concreta (ej. reforzar un punto específico del proceso, no solo la categoría general).</div>`)+
+    (sinSubtipo && subList.length ? `<div class="fc-note warn">El formulario aún no está capturando el SUBTIPO para estos registros — por eso no se puede desglosar más. Vale la pena revisarlo con el equipo de auditoría si quieren tomar decisiones a este nivel de detalle.</div>` : `<div class="fc-note">Usa este desglose para decidir la acción concreta (ej. reforzar un punto específico del proceso, no solo la categoría general).</div>`)+
     `</div><div class="fc-foot"><span>Confidencial — Uso Interno · Sistema de Calidad LIVES</span><span>AC-009-25 en vivo · Generado el ${hoy}</span></div>`;
+  document.getElementById('fichaPeriodSel').innerHTML = periodOptionsHTML(period);
   document.getElementById('fichaOverlay').classList.add('show');
   document.getElementById('fichaOverlay').scrollTop = 0;
 }
@@ -789,21 +879,27 @@ function renderClientes(wrows){
   if(!list.length){
     warn.style.display='block';
     warn.innerHTML = '<b>Sin clientes con mínimo 3 auditorías</b> en este período (el filtro de mínimo evita sacar conclusiones de muestras muy chicas).';
-    reg(new Chart(document.getElementById('cCliRej'), {type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true, maintainAspectRatio:false}}));
+    document.getElementById('listCli').innerHTML='';
     return;
   }
   warn.style.display='none';
-  reg(new Chart(document.getElementById('cCliRej'), {type:'bar',
-    data:{labels:list.map(x=>x.k), datasets:[{data:list.map(x=>x.re), backgroundColor:list.map(x=>x.re>=40?ROSE:x.re>=20?TAN:SAGE), borderRadius:3, barThickness:18}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      layout:{padding:{right:56}},
-      onClick:(e,els)=>{ if(els.length) abrirFichaCliente(list[els[0].index].k); },
-      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>list[c.dataIndex].re+'% rechazo · '+list[c.dataIndex].n+' aud'}}},
-      scales:{x:{min:0, max:100, grid:{color:WARML}, border:{display:false}, ticks:{callback:v=>v+'%'}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
+  const max = Math.max(...list.map(x=>x.re), 1);
+  document.getElementById('listCli').innerHTML = list.map(x=>{
+    const w = Math.max(4, Math.round(x.re/max*100));
+    const color = x.re>=40?ROSE:x.re>=20?TAN:SAGE;
+    const esc = x.k.replace(/'/g,"\\'");
+    return `<div class="hbar-row" style="grid-template-columns:160px 1fr 90px;" onclick="abrirFichaCliente('${esc}')">`+
+      `<div class="hbar-label" title="${x.k}">${x.k}</div>`+
+      `<div class="hbar-track"><div class="hbar-fill" style="width:${w}%;background:${color}"></div></div>`+
+      `<div class="hbar-val">${x.re}% <span style="font-weight:400;color:var(--stone);">· ${x.n} aud</span></div></div>`;
+  }).join('');
 }
 
-function abrirFichaCliente(cliente){
-  const rows = ROWS.filter(r=>r.cliente===cliente);
+function abrirFichaCliente(cliente, period){
+  period = period || curTok();
+  CURRENT_FICHA = {type:'cliente', cliente};
+  const plabel = periodLabel(period);
+  const rows = periodRows(period).filter(r=>r.cliente===cliente);
   const ap = rows.filter(r=>r.resultado==='APROBADO').length, re = rows.filter(r=>r.resultado==='RECHAZADO').length;
   const n = ap+re, pctAp = n?+(ap/n*100).toFixed(1):0;
   const [lbl,cls] = estadoDe(pctAp);
@@ -814,24 +910,25 @@ function abrirFichaCliente(cliente){
     defArr.filter(d=>ids.has(d.idAuditoria)).forEach(d=>{ acc[d.categoria]=(acc[d.categoria]||0)+d.cantidad; });
     return Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,6);
   }
-  let defsHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de defectos disponibles.</span>';
+  let defsHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de defectos disponibles en el período.</span>';
   if(DEF_LOAD_OK && DEF_ROWS.length){
     const top = topDefectos(rows, DEF_ROWS);
     if(top.length) defsHTML = top.map(x=>`<span class="d">${x.k} <b>${x.v}</b></span>`).join('');
   }
-  let dersHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de derivados disponibles.</span>';
+  let dersHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de derivados disponibles en el período.</span>';
   if(DER_LOAD_OK && DER_ROWS.length){
     const top = topDefectos(rows, DER_ROWS);
     if(top.length) dersHTML = top.map(x=>`<span class="d">${x.k} <b>${x.v}</b></span>`).join('');
   }
   const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('fichaCard').innerHTML =
-    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${cliente}</div><div class="tsub">Ficha de cliente · acumulado ${YEARS[0]||''}</div></div><div class="tpct">${pctAp}%<small>${lbl}</small></div></div>`+
+    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${cliente}</div><div class="tsub">Ficha de cliente · ${plabel}</div></div><div class="tpct">${pctAp}%<small>${n?lbl:'Sin datos'}</small></div></div>`+
     `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${n}</div><div class="l">Total Aud.</div></div><div class="k"><div class="v" style="color:var(--sage)">${ap}</div><div class="l">Aprobadas</div></div><div class="k"><div class="v" style="color:var(--rose)">${re}</div><div class="l">Rechazadas</div></div><div class="k"><div class="v">${pctAp}%</div><div class="l">% Aprobación</div></div></div>`+
     `<div class="fc-sec">Defectos más frecuentes (muestra)</div><div class="fc-defs">${defsHTML}</div>`+
     `<div class="fc-sec">Derivados más frecuentes (lote completo)</div><div class="fc-defs">${dersHTML}</div>`+
-    `<div class="fc-note ${(cls==='cri'||cls==='ale')?'warn':''}">${cliente} tiene ${pctAp}% de aprobación acumulada (${n} auditorías). ${(cls==='cri'||cls==='ale')?'Por debajo del estándar de calidad LIVES.':'Dentro del estándar de calidad.'}</div></div>`+
+    `<div class="fc-note ${(cls==='cri'||cls==='ale')?'warn':''}">${cliente} tiene ${pctAp}% de aprobación en ${plabel.toLowerCase()} (${n} auditorías). ${n===0?'Sin auditorías en este período.':((cls==='cri'||cls==='ale')?'Por debajo del estándar de calidad LIVES.':'Dentro del estándar de calidad.')}</div></div>`+
     `<div class="fc-foot"><span>Confidencial — Uso Interno · Sistema de Calidad LIVES</span><span>AC-009-25 en vivo · Generado el ${hoy}</span></div>`;
+  document.getElementById('fichaPeriodSel').innerHTML = periodOptionsHTML(period);
   document.getElementById('fichaOverlay').classList.add('show');
   document.getElementById('fichaOverlay').scrollTop = 0;
 }
