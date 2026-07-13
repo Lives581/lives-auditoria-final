@@ -214,11 +214,21 @@
 
       <div class="panel">
         <div class="pt">🔍 Defectos por origen</div>
-        <div class="ph" id="defSub">Incidencias por categoría madre de defecto (período seleccionado).</div>
+        <div class="ph" id="defSub">Incidencias por categoría madre de defecto — hallados en la <b>muestra</b> auditada (período seleccionado).</div>
         <div class="note" id="defWarn" style="display:none;font-size:11px;"></div>
         <div class="grid2">
           <div><div style="font-weight:700;color:var(--sage);font-size:12.5px;margin-bottom:8px;">🏭 LIVES</div><div class="cwrap" id="wrapDefL" style="height:240px;"><canvas id="cDefLives"></canvas></div></div>
           <div><div style="font-weight:700;color:var(--slate);font-size:12.5px;margin-bottom:8px;">🏗 TALLERES</div><div class="cwrap" id="wrapDefT" style="height:240px;"><canvas id="cDefTalleres"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="pt">📦 Derivados por origen</div>
+        <div class="ph" id="derSub">Incidencias por categoría madre — hallados al revisar el <b>lote completo</b> (no la muestra). Período seleccionado.</div>
+        <div class="note" id="derWarn" style="display:none;font-size:11px;"></div>
+        <div class="grid2">
+          <div><div style="font-weight:700;color:var(--sage);font-size:12.5px;margin-bottom:8px;">🏭 LIVES</div><div class="cwrap" id="wrapDerL" style="height:240px;"><canvas id="cDerLives"></canvas></div></div>
+          <div><div style="font-weight:700;color:var(--slate);font-size:12.5px;margin-bottom:8px;">🏗 TALLERES</div><div class="cwrap" id="wrapDerT" style="height:240px;"><canvas id="cDerTalleres"></canvas></div></div>
         </div>
       </div>
 
@@ -239,10 +249,13 @@
 const SHEET_ID   = '1zM-ajBkOs_PgyzEaXh_gVJ1seXvjRJSVO1ZRql7KnVQ';
 const SHEET_NAME = 'AUDITORÍAS';
 const SHEET_DEFECTOS = 'DEFECTOS';
-// Estructura DEFECTOS según ficha (no verificada aún contra el Sheet real — ver aviso en el dashboard)
+const SHEET_DERIVADOS = 'DERIVADOS';
+// Estructura DEFECTOS/DERIVADOS según ficha — verificada contra el Sheet real (ID_AUDITORIA, SECCIÓN, CATEGORIA, SUBTIPO, CANTIDAD, DETALLE/NOTA, FOTO_URL)
 const DCOL = { ID_AUDITORIA:0, SECCION:1, CATEGORIA:2, SUBTIPO:3, CANTIDAD:4, DETALLE:5, FOTO_URL:6 };
-let DEF_ROWS=[];      // filas de la hoja DEFECTOS
+let DEF_ROWS=[];      // filas de la hoja DEFECTOS (defectos de la MUESTRA)
 let DEF_LOAD_OK=true; // false si falló la carga de DEFECTOS (no bloquea el resto del dashboard)
+let DER_ROWS=[];      // filas de la hoja DERIVADOS (defectos hallados en el LOTE COMPLETO)
+let DER_LOAD_OK=true;
 
 // Índices de columna (0-based) según ficha de estructura AC-009-25
 const COL = {
@@ -253,7 +266,7 @@ const COL = {
   REPROCESO:39, TOTAL_DER:41, MUESTRA_CONTABLE:44
 };
 
-const SAGE='#0F7A5A', ROSE='#DC2626', WARM='#DCE5E2', WARML='#F1F6F4', SLATE='#4E6B78';
+const SAGE='#0F7A5A', ROSE='#DC2626', WARM='#DCE5E2', WARML='#F1F6F4', SLATE='#4E6B78', TAN='#F59E0B', TAUPE='#B45309';
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 let ROWS=[];       // filas computables (COMPUTABLE=1)
@@ -339,7 +352,7 @@ async function cargarDatos(){
     }
 
     poblarSelectores(latestYear);
-    await cargarDefectos(); // no bloqueante para el resto: si falla, el dashboard sigue funcionando
+    await cargarDefectosYDerivados(); // no bloqueante para el resto: si falla, el dashboard sigue funcionando
     setMode('week');
   }catch(e){
     document.getElementById('loading').style.display='none';
@@ -354,9 +367,9 @@ async function cargarDatos(){
   }
 }
 
-async function cargarDefectos(){
+async function cargarHojaTipoDefecto(sheetName, warnElId, labelError){
   try{
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_DEFECTOS)}`;
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
     const res = await fetch(url);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const text = await res.text();
@@ -367,7 +380,7 @@ async function cargarDefectos(){
     const val = (c, idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : null;
     const strv = (c, idx) => { const v = val(c, idx); return v === null ? '' : String(v).trim(); };
     const numv = (c, idx) => { const v = val(c, idx); const n = Number(v); return isNaN(n) ? 0 : n; };
-    DEF_ROWS = rows.map(r=>{
+    const out = rows.map(r=>{
       const c = r.c || [];
       return {
         idAuditoria: strv(c, DCOL.ID_AUDITORIA),
@@ -377,14 +390,22 @@ async function cargarDefectos(){
         cantidad: numv(c, DCOL.CANTIDAD) || 1
       };
     }).filter(r=>r.idAuditoria && r.categoria);
-    DEF_LOAD_OK = true;
+    return {rows: out, ok: true};
   }catch(e){
-    console.error('DEFECTOS no se pudo cargar:', e);
-    DEF_ROWS = [];
-    DEF_LOAD_OK = false;
-    const w = document.getElementById('defWarn');
-    if(w){ w.style.display='block'; w.innerHTML = '<b>⚠ No se pudo cargar el desglose de defectos.</b> El resto del dashboard funciona normal. Detalle: <code>'+(e&&e.message?e.message:e)+'</code>'; }
+    console.error(labelError+' no se pudo cargar:', e);
+    const w = document.getElementById(warnElId);
+    if(w){ w.style.display='block'; w.innerHTML = '<b>⚠ No se pudo cargar '+labelError+'.</b> El resto del dashboard funciona normal. Detalle: <code>'+(e&&e.message?e.message:e)+'</code>'; }
+    return {rows: [], ok: false};
   }
+}
+
+async function cargarDefectosYDerivados(){
+  const [def, der] = await Promise.all([
+    cargarHojaTipoDefecto(SHEET_DEFECTOS, 'defWarn', 'el desglose de defectos'),
+    cargarHojaTipoDefecto(SHEET_DERIVADOS, 'derWarn', 'el desglose de derivados')
+  ]);
+  DEF_ROWS = def.rows; DEF_LOAD_OK = def.ok;
+  DER_ROWS = der.rows; DER_LOAD_OK = der.ok;
 }
 
 function poblarSelectores(year){
@@ -495,6 +516,7 @@ function render(mode, value){
   renderProceso(wrows);
   renderRanking();
   renderDefectos(wrows);
+  renderDerivados(wrows);
 
   const hoy = new Date().toLocaleDateString('es-PE',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   document.getElementById('foot').innerHTML = 'Confidencial — Uso Interno · Calidad Manufactura LIVES · AC-009-25 en vivo · Vista generada el '+hoy;
@@ -578,11 +600,20 @@ function abrirFichaTaller(servicio){
     const top = Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,6);
     if(top.length) defsHTML = top.map(x=>`<span class="d">${x.k} <b>${x.v}</b></span>`).join('');
   }
+  let dersHTML = '<span style="font-size:11px;color:var(--stone)">Sin datos de derivados disponibles para este taller.</span>';
+  if(DER_LOAD_OK && DER_ROWS.length){
+    const ids = new Set(rows.map(r=>r.id));
+    const acc = {};
+    DER_ROWS.filter(d=>ids.has(d.idAuditoria)).forEach(d=>{ acc[d.categoria]=(acc[d.categoria]||0)+d.cantidad; });
+    const top = Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,6);
+    if(top.length) dersHTML = top.map(x=>`<span class="d">${x.k} <b>${x.v}</b></span>`).join('');
+  }
   const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('fichaCard').innerHTML =
     `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${servicio}</div><div class="tsub">Ficha de desempeño · Taller externo · acumulado ${YEARS[0]||''}</div></div><div class="tpct">${pctAp}%<small>${lbl}</small></div></div>`+
     `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${n}</div><div class="l">Total Aud.</div></div><div class="k"><div class="v" style="color:var(--sage)">${ap}</div><div class="l">Aprobadas</div></div><div class="k"><div class="v" style="color:var(--rose)">${re}</div><div class="l">Rechazadas</div></div><div class="k"><div class="v">${pctAp}%</div><div class="l">% Aprobación</div></div></div>`+
-    `<div class="fc-sec">Defectos más frecuentes</div><div class="fc-defs">${defsHTML}</div>`+
+    `<div class="fc-sec">Defectos más frecuentes (muestra)</div><div class="fc-defs">${defsHTML}</div>`+
+    `<div class="fc-sec">Derivados más frecuentes (lote completo)</div><div class="fc-defs">${dersHTML}</div>`+
     `<div class="fc-note ${(cls==='cri'||cls==='ale')?'warn':''}">${servicio} tiene ${pctAp}% de aprobación acumulada (${n} auditorías). ${(cls==='cri'||cls==='ale')?'Por debajo del estándar de calidad LIVES — requiere seguimiento.':'Dentro del estándar de calidad.'}</div></div>`+
     `<div class="fc-foot"><span>Confidencial — Uso Interno · Sistema de Calidad LIVES</span><span>AC-009-25 en vivo · Generado el ${hoy}</span></div>`;
   document.getElementById('fichaOverlay').classList.add('show');
@@ -616,6 +647,38 @@ function renderDefectos(wrows){
   if(!tL.length && !tT.length){
     warn.style.display='block';
     warn.innerHTML = '<b>Sin defectos registrados</b> para las auditorías de este período.';
+  } else {
+    warn.style.display='none';
+  }
+}
+
+function renderDerivados(wrows){
+  const warn = document.getElementById('derWarn');
+  if(!DER_LOAD_OK){ warn.style.display='block'; return; } // mensaje ya seteado en cargarHojaTipoDefecto()
+  if(!DER_ROWS.length){
+    warn.style.display='block';
+    warn.innerHTML = '<b>Sin datos</b> La hoja DERIVADOS respondió pero no tiene filas todavía. Puede ser normal si aún no se registraron derivados en este período.';
+    return;
+  }
+  const idsLive = new Set(wrows.filter(r=>r.intext==='INTERNA').map(r=>r.id));
+  const idsTal  = new Set(wrows.filter(r=>r.intext==='EXTERNA').map(r=>r.id));
+  function top(ids){
+    const acc={};
+    DER_ROWS.filter(d=>ids.has(d.idAuditoria)).forEach(d=>{ acc[d.categoria]=(acc[d.categoria]||0)+d.cantidad; });
+    return Object.keys(acc).map(k=>({k,v:acc[k]})).sort((a,b)=>b.v-a.v).slice(0,8);
+  }
+  const tL = top(idsLive), tT = top(idsTal);
+  reg(new Chart(document.getElementById('cDerLives'), {type:'bar',
+    data:{labels:tL.map(x=>x.k), datasets:[{data:tL.map(x=>x.v), backgroundColor:TAN, borderRadius:3}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
+  reg(new Chart(document.getElementById('cDerTalleres'), {type:'bar',
+    data:{labels:tT.map(x=>x.k), datasets:[{data:tT.map(x=>x.v), backgroundColor:TAUPE, borderRadius:3}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
+  if(!tL.length && !tT.length){
+    warn.style.display='block';
+    warn.innerHTML = '<b>Sin derivados registrados</b> para las auditorías de este período.';
   } else {
     warn.style.display='none';
   }
