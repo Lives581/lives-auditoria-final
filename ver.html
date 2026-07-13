@@ -77,7 +77,7 @@ td{padding:7px 9px;border-bottom:1px solid #eef1f4}
 <div class="toolbar">
   <h1 id="ttl">Reporte de auditoría</h1>
   <div class="acts">
-    <button class="tbtn back" onclick="location.href='buscar.html'">← Buscar</button>
+    <button class="tbtn back" onclick="volverAtras()">← Atrás</button>
     <button class="tbtn fotos" id="btnMed" onclick="verFotos('med')" style="display:none">🖼 Hojas de medidas</button>
     <button class="tbtn proc" id="btnProc" onclick="verFotos('proc')" style="display:none">🖼 Medidas de proceso</button>
     <button class="tbtn share" id="btnShare" onclick="compartirReporte()">📤 Compartir</button>
@@ -413,6 +413,15 @@ async function compartirReporte(){
   }
 }
 
+function volverAtras(){
+  // Si venimos de buscar.html (mismo sitio), usar el "atrás" real del navegador (conserva los filtros de búsqueda).
+  // Si se abrió el enlace directo (ej. compartido por WhatsApp), no hay a dónde volver: ir a buscar.html.
+  if(document.referrer && document.referrer.indexOf(location.origin)===0){
+    history.back();
+  } else {
+    location.href='buscar.html';
+  }
+}
 cargar();
 </script>
 </body>
