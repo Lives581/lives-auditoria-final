@@ -17,7 +17,7 @@
   .divider{width:1px;height:34px;background:rgba(255,255,255,.35);}
   .htitle{color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px;}
   .hsub{color:#F1F6F4;font-size:12px;}
-  .wrap{max-width:1140px;margin:0 auto;padding:20px 24px 44px;}
+  .wrap{max-width:1600px;margin:0 auto;padding:22px 32px 48px;}
 
   .loading{text-align:center;padding:60px 20px;color:var(--stone);font-size:15px;}
   .loading .spin{display:inline-block;width:34px;height:34px;border:4px solid var(--warm-light);border-top-color:var(--sage);border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:14px;}
@@ -302,7 +302,7 @@ const COL = {
 const SAGE='#0F7A5A', ROSE='#DC2626', WARM='#DCE5E2', WARML='#F1F6F4', SLATE='#4E6B78', TAN='#F59E0B', TAUPE='#B45309';
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-let ROWS=[];       // filas computables (COMPUTABLE=1)
+let ROWS=[];       // TODAS las auditorías (ya no se filtra por COMPUTABLE — ver nota en cargarDatos)
 let OTHER_RES=0;   // filas con RESULTADO_FINAL fuera de APROBADO/RECHAZADO
 let YEARS=[], WEEKS=[], MONTHS=[];
 let CURMODE='week', CURVAL=null;
@@ -346,7 +346,11 @@ async function cargarDatos(){
     rows.forEach(r=>{
       const c = r.c || [];
       const computable = numv(c, COL.COMPUTABLE);
-      if(computable !== 1) return; // filtro obligatorio: solo auditorías computables
+      // NOTA: ya NO filtramos por COMPUTABLE aquí. Regla de negocio (confirmada por Christian):
+      // el conteo de AUDITORÍAS debe incluir todas las filas (licencias, repetidas, etc. son trabajo real).
+      // COMPUTABLE solo importa para LOTE/MUESTRA — y ahí ya no hace falta filtrar aparte, porque
+      // LOTE_CONTABLE/MUESTRA_CONTABLE vienen en 0 desde el Sheet para lotes repetidos/no contables,
+      // así que sumarlas directamente ya evita inflar sin necesidad de excluir la fila entera.
       const fecha = parseFecha(val(c, COL.FECHA));
       const anio = numv(c, COL.ANIO) || (fecha ? fecha.getFullYear() : null);
       const semana = numv(c, COL.SEMANA);
@@ -360,7 +364,7 @@ async function cargarDatos(){
       const idAuditoria = strv(c, 0);
       const cliente = strv(c, COL.CLIENTE);
       if(!anio || !semana) return;
-      all.push({id:idAuditoria, fecha, anio, semana, mes, intext, resultado, servicio, loteContable, muestraContable, nAuditoria, cliente});
+      all.push({id:idAuditoria, fecha, anio, semana, mes, intext, resultado, servicio, loteContable, muestraContable, nAuditoria, cliente, computable});
     });
 
     // filas cuyo resultado no es APROBADO/RECHAZADO (transparencia, no se descartan del total)
@@ -373,7 +377,7 @@ async function cargarDatos(){
     WEEKS = [...new Set(ofYear.map(r=>r.semana))].sort((a,b)=>a-b);
     MONTHS = [...new Set(ofYear.filter(r=>r.mes!==null).map(r=>r.mes))].sort((a,b)=>a-b);
 
-    if(!all.length) throw new Error('El Sheet respondió pero no se encontraron filas computables (COMPUTABLE=1). Verifica que la hoja "AUDITORÍAS" tenga datos.');
+    if(!all.length) throw new Error('El Sheet respondió pero no se encontraron filas en la hoja "AUDITORÍAS". Verifica que tenga datos.');
 
     document.getElementById('loading').style.display='none';
     document.getElementById('bar').style.display='flex';
@@ -488,7 +492,7 @@ function render(mode, value){
 
   document.getElementById('srcNote').innerHTML =
     `<b>Fuente:</b> AC-009-25 (en vivo) · Año <b>${YEARS[0]}</b> · ${isMonth?'Mes: '+MESES[value]:'Semana '+value} · `+
-    `Solo auditorías computables (COMPUTABLE=1). Tasas = RECHAZADAS / (APROBADAS+RECHAZADAS).`;
+    `Se cuentan todas las auditorías registradas · Lote/Muestra auditados usan columnas ya deduplicadas por el Sheet (no se inflan por reprocesos) · Tasas = RECHAZADAS / (APROBADAS+RECHAZADAS).`;
 
   const liveRows = wrows.filter(r=>r.intext==='INTERNA');
   const tallerRows = wrows.filter(r=>r.intext==='EXTERNA');
@@ -686,11 +690,15 @@ function renderDefectos(wrows){
   const tL = top(idsLive), tT = top(idsTal);
   reg(new Chart(document.getElementById('cDefLives'), {type:'bar',
     data:{labels:tL.map(x=>x.k), datasets:[{data:tL.map(x=>x.v), backgroundColor:ROSE, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
+      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DEF_ROWS, idsLive, tL[els[0].index].k, 'Defecto', 'LIVES'); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
       scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
   reg(new Chart(document.getElementById('cDefTalleres'), {type:'bar',
     data:{labels:tT.map(x=>x.k), datasets:[{data:tT.map(x=>x.v), backgroundColor:SLATE, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
+      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DEF_ROWS, idsTal, tT[els[0].index].k, 'Defecto', 'Talleres'); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
       scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
   if(!tL.length && !tT.length){
     warn.style.display='block';
@@ -718,11 +726,15 @@ function renderDerivados(wrows){
   const tL = top(idsLive), tT = top(idsTal);
   reg(new Chart(document.getElementById('cDerLives'), {type:'bar',
     data:{labels:tL.map(x=>x.k), datasets:[{data:tL.map(x=>x.v), backgroundColor:TAN, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
+      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DER_ROWS, idsLive, tL[els[0].index].k, 'Derivado', 'LIVES'); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
       scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
   reg(new Chart(document.getElementById('cDerTalleres'), {type:'bar',
     data:{labels:tT.map(x=>x.k), datasets:[{data:tT.map(x=>x.v), backgroundColor:TAUPE, borderRadius:3}]},
-    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{footer:()=>'Clic para ver subtipos'}}},
+      onClick:(e,els)=>{ if(els.length) abrirFichaCategoria(DER_ROWS, idsTal, tT[els[0].index].k, 'Derivado', 'Talleres'); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
       scales:{x:{min:0, grid:{color:WARML}, border:{display:false}, ticks:{precision:0}}, y:{grid:{display:false}, border:{color:WARM}, ticks:{font:{size:10}}}}}}));
   if(!tL.length && !tT.length){
     warn.style.display='block';
@@ -730,6 +742,35 @@ function renderDerivados(wrows){
   } else {
     warn.style.display='none';
   }
+}
+
+function abrirFichaCategoria(sourceRows, idsSet, categoria, tipo, origenLabel){
+  const rows = sourceRows.filter(d => idsSet.has(d.idAuditoria) && d.categoria===categoria);
+  const total = rows.reduce((s,r)=>s+r.cantidad,0);
+  const auditsAfectadas = new Set(rows.map(r=>r.idAuditoria)).size;
+  const bySub = {};
+  rows.forEach(r=>{ const k = r.subtipo || '(sin subtipo especificado)'; bySub[k]=(bySub[k]||0)+r.cantidad; });
+  const subList = Object.keys(bySub).map(k=>({k,v:bySub[k]})).sort((a,b)=>b.v-a.v);
+  const maxV = subList.length ? subList[0].v : 1;
+  const color = tipo==='Defecto' ? ROSE : TAN;
+  const barsHTML = subList.map(x=>{
+    const pctW = Math.max(6, Math.round(x.v/maxV*100));
+    return `<div style="display:flex;align-items:center;gap:10px;margin:7px 0;">
+      <div style="width:170px;font-size:11.5px;color:#333;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${x.k}</div>
+      <div style="flex:1;background:var(--warm-light);border-radius:4px;height:15px;overflow:hidden;"><div style="width:${pctW}%;height:100%;background:${color};border-radius:4px;"></div></div>
+      <div style="width:40px;text-align:right;font-size:11.5px;font-weight:700;color:var(--stone);">${x.v}</div>
+    </div>`;
+  }).join('') || '<span style="font-size:11px;color:var(--stone)">Sin registros para esta categoría en el período.</span>';
+  const sinSubtipo = subList.length===1 && subList[0].k==='(sin subtipo especificado)';
+  const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('fichaCard').innerHTML =
+    `<div class="fc-hd" style="background:${tipo==='Defecto'?'#DC2626':'#B45309'}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${categoria}</div><div class="tsub">${tipo} · ${origenLabel} · desglose por subtipo · período seleccionado</div></div><div class="tpct">${total}<small>incidencias</small></div></div>`+
+    `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${total}</div><div class="l">Incidencias</div></div><div class="k"><div class="v">${auditsAfectadas}</div><div class="l">Auditorías afectadas</div></div><div class="k"><div class="v" style="font-size:13px">${origenLabel}</div><div class="l">Origen</div></div><div class="k"><div class="v" style="font-size:13px">${tipo}</div><div class="l">Tipo</div></div></div>`+
+    `<div class="fc-sec">Desglose por subtipo</div><div>${barsHTML}</div>`+
+    (sinSubtipo ? `<div class="fc-note warn">El formulario aún no está capturando el SUBTIPO para estos registros — por eso no se puede desglosar más. Vale la pena revisarlo con el equipo de auditoría si quieren tomar decisiones a este nivel de detalle.</div>` : `<div class="fc-note">Usa este desglose para decidir la acción concreta (ej. reforzar un punto específico del proceso, no solo la categoría general).</div>`)+
+    `</div><div class="fc-foot"><span>Confidencial — Uso Interno · Sistema de Calidad LIVES</span><span>AC-009-25 en vivo · Generado el ${hoy}</span></div>`;
+  document.getElementById('fichaOverlay').classList.add('show');
+  document.getElementById('fichaOverlay').scrollTop = 0;
 }
 
 function renderClientes(wrows){
