@@ -300,9 +300,9 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
 
 <div class="bar"><div class="inner">
   <div class="verdict" id="verdict"><div class="vk">Veredicto</div><div class="vv" id="vText">—</div></div>
-  <button class="save" id="save" disabled>Guardar</button>
+  <button class="save" id="save">Guardar</button>
 </div>
-<div id="faltanBox" style="display:none;background:#fdf5e3;border-top:1px solid #e9c46a;color:#7a5a12;font-size:12.5px;padding:8px 14px;text-align:center"></div>
+
 </div>
 <div class="toast" id="toast"></div>
 <input type="file" accept="image/*" capture="environment" id="camGlobal" hidden>
@@ -966,42 +966,36 @@ function tieneContenidoReal(id,minimo){
   const soloAlfa=val.replace(/[^A-Za-z0-9]/g,'');
   return soloAlfa.length>=minimo;
 }
-function validate(){
+// Calcula qué campos faltan/están mal. No se muestra mientras se llena el formulario
+// (a propósito: mostrarlo en vivo deja ver las reglas exactas y facilita "hacer trampa" con el mínimo que pasa la validación).
+// Solo se usa el resultado al momento de intentar Guardar.
+function calcularFaltantes(){
   const lote=parseInt(v('recibido'))||0;
   const editando = !!S.editId;
   const esPrimera = (S.nAud==='1ra');
   const fotoMedOK = editando || !esPrimera || S.fotosMed.length>0;
 
-  // Armar lista de lo que falta (para avisar a la auditora)
   const faltan=[];
   if(!v2('grupo')) faltan.push('Grupo');
   if(!v2('estiloL')) faltan.push('Estilo LIVES');
-  if(!tieneContenidoReal('estiloC',2)) faltan.push('Estilo cliente (puede tener rayas, pero no solo símbolos)');
-  if(!poValido()) faltan.push(poEsOpcional() ? 'PO (si lo pones: solo letras/números, mínimo 4 caracteres, sin rayas)' : 'PO (mínimo 4 caracteres, solo letras y números, sin rayas)');
+  if(!tieneContenidoReal('estiloC',2)) faltan.push('Estilo cliente');
+  if(!poValido()) faltan.push('PO');
   if(!v2('color')) faltan.push('Color');
   if(!v2('destino')) faltan.push('Destino');
-  if(!/^[0-9]+$/.test(v('pedido'))) faltan.push('Cant. pedido (solo números)');
+  if(!/^[0-9]+$/.test(v('pedido'))) faltan.push('Cant. pedido');
   if(!lote) faltan.push('Total recibido');
   if(!S.proceso) faltan.push('Proceso');
   if(!v2('auditor')) faltan.push('Auditor');
   if(!v('fecha')) faltan.push('Fecha');
-  if(!S.nAud) faltan.push('N° de auditoría (completa grupo/estilo/PO/color/proceso)');
+  if(!S.nAud) faltan.push('N° de auditoría');
   if(!fotoMedOK) faltan.push('Foto de hojas de medidas');
   if(S.proceso&&S.int_ext==='EXTERNA'&&!v('taller')) faltan.push('Taller');
   if(S.override&&(!v('ovWho')||!v('ovWhy'))) faltan.push('Datos del override');
-
-  const ok = faltan.length===0;
-  $('save').disabled=!ok;
-
-  // Mostrar el aviso de faltantes
-  const av=$('faltanBox');
-  if(av){
-    if(ok){ av.style.display='none'; }
-    else {
-      av.style.display='block';
-      av.innerHTML = '⚠️ Falta llenar: <b>' + faltan.join(', ') + '</b>';
-    }
-  }
+  return faltan;
+}
+// Se sigue llamando en cada cambio del formulario (para el autoguardado del borrador),
+// pero YA NO deshabilita el botón ni muestra ningún aviso mientras se llena.
+function validate(){
   guardarBorradorDebounced();
 }
 $('grupo').addEventListener('input',maskGrupo);
@@ -1076,6 +1070,12 @@ function armarPayload(){
 }
 
 $('save').onclick=async()=>{
+  // Validar recién AHORA (al intentar guardar), no mientras se llena — así no se ve la lista de reglas mientras escriben.
+  const faltan=calcularFaltantes();
+  if(faltan.length>0){
+    toast('Falta completar: '+faltan.join(', '),'err');
+    return;
+  }
   const btn=$('save');btn.disabled=true;btn.textContent='Guardando…';
   const payload=armarPayload();
   // CORRECCIÓN: requiere conexión (no se encola, para no duplicar)
