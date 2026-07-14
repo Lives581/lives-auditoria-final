@@ -179,7 +179,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
       <div><label>Estilo LIVES</label><input id="estiloL" list="dlEstilo" autocomplete="off" placeholder="24647">
         <datalist id="dlEstilo"></datalist></div>
       <div><label id="poLabel">PO *</label><input id="po" list="dlPo" autocomplete="off" placeholder="6002469 o con letras">
-        <div class="hint">Mínimo 5 caracteres, solo letras y números (sin rayas ni espacios).</div>
+        <div class="hint">Al menos 4 caracteres reales (letras/números). Puede tener rayas si así es tu PO — pero no pongas solo una raya ni lo dejes con puro símbolo.</div>
         <div class="hint" id="poHint" style="display:none">En Costura, si aún no tienen el PO, pueden dejarlo vacío y completarlo después en "Mis auditorías".</div>
         <datalist id="dlPo"></datalist></div>
       <div><label>Color</label><input id="color" list="dlColor" autocomplete="off" placeholder="White">
@@ -564,17 +564,15 @@ function soloDigitos(e){
   const limpio=el.value.replace(/[^0-9]/g,'');
   if(limpio!==el.value){ el.value=limpio; try{ el.setSelectionRange(pos-1,pos-1); }catch(err){} }
 }
-// PO: solo letras y números (sin rayas ni símbolos). Si es Costura puede quedar vacío (regla ya existente).
-function soloAlfanumerico(e){
-  const el=e.target; const pos=el.selectionStart;
-  const limpio=el.value.replace(/[^A-Za-z0-9]/g,'');
-  if(limpio!==el.value){ el.value=limpio; try{ el.setSelectionRange(pos-1,pos-1); }catch(err){} }
-}
-// Valida el PO: si está vacío solo es válido en Costura (taller); si tiene algo, debe ser alfanumérico de 5+ caracteres (sin rayas/símbolos)
+// Valida el PO: si está vacío, solo es válido en Costura (taller).
+// Si tiene algo escrito, debe tener AL MENOS 4 caracteres de letras/números reales
+// (las rayas SÍ pueden ser parte de un PO válido, ej. "6002469-1"; lo que NO vale es
+// poner solo una raya, solo espacios, o dejarlo con puro símbolo como relleno).
 function poValido(){
   const val=v('po');
   if(!val) return poEsOpcional();
-  return /^[A-Za-z0-9]{4,}$/.test(val);
+  const soloAlfa=val.replace(/[^A-Za-z0-9]/g,'');
+  return soloAlfa.length>=4;
 }
 
 /* ===== Pedido: autocompletar + bloquear según lote previo ===== */
@@ -959,6 +957,15 @@ $('ovSwitch').onchange=()=>{S.override=$('ovSwitch').checked;$('ovFields').class
 /* ===== validación ===== */
 function v(id){return ($(id).value||'').trim();}
 function v2(id){ return v(id).length>=2; }  // texto con al menos 2 caracteres reales
+// Igual que v2, pero además exige que no sea solo símbolos/rayas (ej. "--" no vale, aunque tenga 2 caracteres).
+// Las rayas SÍ pueden ser parte legítima del valor (ej. estilos de cliente tipo "QRKRS-T6539M"), solo no puede ser TODO símbolos.
+function tieneContenidoReal(id,minimo){
+  minimo=minimo||2;
+  const val=v(id);
+  if(val.length<minimo) return false;
+  const soloAlfa=val.replace(/[^A-Za-z0-9]/g,'');
+  return soloAlfa.length>=minimo;
+}
 function validate(){
   const lote=parseInt(v('recibido'))||0;
   const editando = !!S.editId;
@@ -969,7 +976,7 @@ function validate(){
   const faltan=[];
   if(!v2('grupo')) faltan.push('Grupo');
   if(!v2('estiloL')) faltan.push('Estilo LIVES');
-  if(!v2('estiloC')) faltan.push('Estilo cliente');
+  if(!tieneContenidoReal('estiloC',2)) faltan.push('Estilo cliente (puede tener rayas, pero no solo símbolos)');
   if(!poValido()) faltan.push(poEsOpcional() ? 'PO (si lo pones: solo letras/números, mínimo 4 caracteres, sin rayas)' : 'PO (mínimo 4 caracteres, solo letras y números, sin rayas)');
   if(!v2('color')) faltan.push('Color');
   if(!v2('destino')) faltan.push('Destino');
@@ -999,7 +1006,6 @@ function validate(){
 }
 $('grupo').addEventListener('input',maskGrupo);
 $('pedido').addEventListener('input',soloDigitos);
-$('po').addEventListener('input',soloAlfanumerico);
 ['po','recibido','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('recibido').addEventListener('input',calcAvance);
 $('pedido').addEventListener('input',calcAvance);
