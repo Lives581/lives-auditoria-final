@@ -179,6 +179,7 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
       <div><label>Estilo LIVES</label><input id="estiloL" list="dlEstilo" autocomplete="off" placeholder="24647">
         <datalist id="dlEstilo"></datalist></div>
       <div><label id="poLabel">PO *</label><input id="po" list="dlPo" autocomplete="off" placeholder="6002469 o con letras">
+        <div class="hint">Mínimo 5 caracteres, solo letras y números (sin rayas ni espacios).</div>
         <div class="hint" id="poHint" style="display:none">En Costura, si aún no tienen el PO, pueden dejarlo vacío y completarlo después en "Mis auditorías".</div>
         <datalist id="dlPo"></datalist></div>
       <div><label>Color</label><input id="color" list="dlColor" autocomplete="off" placeholder="White">
@@ -235,8 +236,8 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
     <div class="total-def"><span>Total de defectos</span><b id="totDef">0</b></div>
   </div>
 
-  <!-- DERIVADOS -->
-  <div class="card">
+  <!-- DERIVADOS (solo aplica a Costura (taller)) -->
+  <div class="card" id="derivadosCard" style="display:none">
     <div class="sec"><span class="dot"></span>Derivados</div>
     <div class="hint" style="margin:-6px 0 10px">Sobre el lote recibido. NO cuentan para el AQL. Opcional. Toca las categorías que apliquen.</div>
     <div id="derChecklist"></div>
@@ -546,7 +547,8 @@ function maskMedidas(e){
 function maskGrupo(e){
   const el=e.target;
   const posOriginal=el.selectionStart;
-  const raw=el.value.toUpperCase().replace(/-/g,'');   // mayúsculas, sin guiones (se reinserta solo)
+  // mayúsculas, SIN guiones ni espacios (ambos se quitan; el guión se reinserta solo, el espacio nunca)
+  const raw=el.value.toUpperCase().replace(/-/g,'').replace(/\s+/g,'');
   let nuevo=raw;
   if(raw.length>3){ nuevo=raw.substring(0,3)+'-'+raw.substring(3); }
   el.value=nuevo;
@@ -554,6 +556,25 @@ function maskGrupo(e){
   let nuevaPos=posOriginal;
   if(nuevo.length>raw.length && posOriginal>3) nuevaPos=posOriginal+1;
   try{ el.setSelectionRange(nuevaPos,nuevaPos); }catch(err){}
+}
+
+// Cant. pedido: SOLO dígitos. Cualquier otro carácter (rayas, letras, espacios) se descarta al escribir.
+function soloDigitos(e){
+  const el=e.target; const pos=el.selectionStart;
+  const limpio=el.value.replace(/[^0-9]/g,'');
+  if(limpio!==el.value){ el.value=limpio; try{ el.setSelectionRange(pos-1,pos-1); }catch(err){} }
+}
+// PO: solo letras y números (sin rayas ni símbolos). Si es Costura puede quedar vacío (regla ya existente).
+function soloAlfanumerico(e){
+  const el=e.target; const pos=el.selectionStart;
+  const limpio=el.value.replace(/[^A-Za-z0-9]/g,'');
+  if(limpio!==el.value){ el.value=limpio; try{ el.setSelectionRange(pos-1,pos-1); }catch(err){} }
+}
+// Valida el PO: si está vacío solo es válido en Costura (taller); si tiene algo, debe ser alfanumérico de 5+ caracteres (sin rayas/símbolos)
+function poValido(){
+  const val=v('po');
+  if(!val) return poEsOpcional();
+  return /^[A-Za-z0-9]{4,}$/.test(val);
 }
 
 /* ===== Pedido: autocompletar + bloquear según lote previo ===== */
@@ -647,6 +668,10 @@ $('proceso').onchange=()=>{
   const esCostura = S.proceso==='Costura (taller)';
   const poLabel=$('poLabel'); if(poLabel) poLabel.textContent = esCostura ? 'PO' : 'PO *';
   const poHint=$('poHint'); if(poHint) poHint.style.display = esCostura ? 'block' : 'none';
+  // Derivados SOLO aplica a Costura (taller). En Acabados y Auditoría Final no se muestra ni se guarda.
+  const derCard=$('derivadosCard');
+  if(derCard) derCard.style.display = esCostura ? 'block' : 'none';
+  if(!esCostura){ limpiarDerivados(); }
   fillTaller(S.proceso);
   actualizarCardProceso();
   pedirOrdinal(); validate();
@@ -812,6 +837,15 @@ function generarChecklistDerivados(){
   S.ders = madresPorSeccion('Derivados').map(m=>crearBloqueCategoria('Derivados',m));
   pintarChecklist($('derChecklist'),S.ders);
 }
+// Pone en 0 todas las cantidades/fotos de derivados (se usa al cambiar a un proceso donde Derivados no aplica)
+function limpiarDerivados(){
+  (S.ders||[]).forEach(b=>{
+    b.cant=0; b.foto='';
+    (b.subs||[]).forEach(s=>{ s.cant=0; s.foto=''; });
+  });
+  pintarChecklist($('derChecklist'),S.ders);
+  recalc();
+}
 
 // Pinta la lista de filas colapsables (una por categoría). Cada fila administra su propio estado (abierta/cerrada).
 function pintarChecklist(cont,bloques){
@@ -936,10 +970,10 @@ function validate(){
   if(!v2('grupo')) faltan.push('Grupo');
   if(!v2('estiloL')) faltan.push('Estilo LIVES');
   if(!v2('estiloC')) faltan.push('Estilo cliente');
-  if(!poEsOpcional()&&!v2('po')) faltan.push('PO');
+  if(!poValido()) faltan.push(poEsOpcional() ? 'PO (si lo pones: solo letras/números, mínimo 4 caracteres, sin rayas)' : 'PO (mínimo 4 caracteres, solo letras y números, sin rayas)');
   if(!v2('color')) faltan.push('Color');
   if(!v2('destino')) faltan.push('Destino');
-  if(!v('pedido')) faltan.push('Cant. pedido');
+  if(!/^[0-9]+$/.test(v('pedido'))) faltan.push('Cant. pedido (solo números)');
   if(!lote) faltan.push('Total recibido');
   if(!S.proceso) faltan.push('Proceso');
   if(!v2('auditor')) faltan.push('Auditor');
@@ -964,6 +998,8 @@ function validate(){
   guardarBorradorDebounced();
 }
 $('grupo').addEventListener('input',maskGrupo);
+$('pedido').addEventListener('input',soloDigitos);
+$('po').addEventListener('input',soloAlfanumerico);
 ['po','recibido','auditor','fecha','grupo','estiloL','estiloC','color','destino','pedido'].forEach(id=>$(id).addEventListener('input',recalc));
 $('recibido').addEventListener('input',calcAvance);
 $('pedido').addEventListener('input',calcAvance);
@@ -1026,7 +1062,7 @@ function armarPayload(){
     muestra_medidas:parseInt(v('medMuestra'))||'',def_medidas:parseInt(v('medDef'))||'',resultado_medidas:v('medRes'),
     auditor:v('auditor'),
     defectos:expandirBloques(S.defs),
-    derivados:expandirBloques(S.ders,'Derivados'),
+    derivados: (S.proceso==='Costura (taller)') ? expandirBloques(S.ders,'Derivados') : [],
     fotos_medidas:S.fotosMed, fotos_proceso:S.fotosPro, comentario:v('comentario'),
     modo: S.editId ? 'actualizar' : 'nuevo',
     edit_id: S.editId || ''
@@ -1186,6 +1222,9 @@ function cargarParaEditar(id){
   S.int_ext = (norm(proc).indexOf('interno')>=0) ? 'INTERNA' : (proc?'EXTERNA':'');
   // mostrar/ocultar bloque de licencia según el proceso (solo aplica a Auditoría Final interno)
   const licWrap=$('licWrap'); if(licWrap) licWrap.style.display=(norm(proc).indexOf('interno')>=0)?'flex':'none';
+  // Derivados solo aplica a Costura (taller)
+  const esCosturaEd = proc==='Costura (taller)';
+  const derCardEd=$('derivadosCard'); if(derCardEd) derCardEd.style.display = esCosturaEd ? 'block' : 'none';
   generarChecklistDefectos();
   // medidas
   $('medMuestra').value=r[28]||''; $('medDef').value=r[29]||''; $('medRes').value=r[30]||'';
@@ -1315,6 +1354,8 @@ function restaurarBorrador(){
   const esInterno = S.proceso==='Acabados Final (interno)';
   const licWrap=$('licWrap'); if(licWrap) licWrap.style.display = esInterno ? 'flex' : 'none';
   if(!esInterno && S.licencia){ S.licencia=false; if($('licSwitch')) $('licSwitch').checked=false; }
+  // Derivados solo aplica a Costura (taller)
+  const derCardR=$('derivadosCard'); if(derCardR) derCardR.style.display = (S.proceso==='Costura (taller)') ? 'block' : 'none';
   if(S.proceso&&typeof fillTaller==='function') fillTaller(S.proceso);
 
   S.fotosMed=b.fotosMed||[]; S.fotosPro=b.fotosPro||[];
