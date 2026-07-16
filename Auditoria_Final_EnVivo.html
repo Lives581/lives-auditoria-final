@@ -39,7 +39,9 @@
   .livebadge .dot{width:7px;height:7px;border-radius:50%;background:var(--emer);animation:pulse 1.6s ease-in-out infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 
-  .clifilter{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--warm-light);}
+  .clifilter{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--warm-light);}
+  .clifilter.last{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+  #filtersCard{margin-bottom:18px;}
   .clifilter-lbl{font-size:12.5px;font-weight:700;color:var(--stone);padding-top:6px;flex-shrink:0;}
   .clibtns{display:flex;flex-wrap:wrap;gap:8px;}
   .clibtn{background:#fff;border:1.5px solid var(--warm);color:#333;border-radius:20px;padding:6px 15px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:.12s;}
@@ -65,7 +67,13 @@
   .row2 .panel{margin-bottom:0;height:100%;}
   .kdual{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
   @media(max-width:760px){.kdual{grid-template-columns:1fr;}}
-  .kdual.solo{grid-template-columns:1fr;max-width:620px;}
+  .kdual.solo{grid-template-columns:1fr;}
+  .kbody{display:block;}
+  .kbody.wide{display:flex;align-items:center;gap:40px;padding:6px 8px;}
+  .kbody.wide .kgrid{flex:1;grid-template-columns:repeat(4,1fr);gap:24px;}
+  .kbody.wide .kcell .v{font-size:30px;}
+  .kbody.wide .donutwrap{flex:none;margin-top:0;}
+  .kbody.wide .donutwrap .dc{width:118px;height:118px;}
   .row2.solo1{grid-template-columns:1fr;}
   .row2.solo1 #panelComparativo{display:none;}
   .kpanel{background:#fff;border:1px solid var(--warm);border-radius:8px;padding:16px 18px;}
@@ -172,14 +180,15 @@
       <span class="wsel" id="monthWrap" style="display:none">Mes: <select id="monthSel"></select></span>
     </div>
 
-    <div id="cliFilterWrap" class="clifilter" style="display:none">
-      <span class="clifilter-lbl">Cliente:</span>
-      <div id="cliFilterBar" class="clibtns"></div>
-    </div>
-
-    <div id="tllFilterWrap" class="clifilter" style="display:none">
-      <span class="clifilter-lbl">Taller / Origen:</span>
-      <div id="tllFilterBar" class="clibtns"></div>
+    <div class="panel" id="filtersCard" style="display:none;">
+      <div id="cliFilterWrap" class="clifilter">
+        <span class="clifilter-lbl">Cliente:</span>
+        <div id="cliFilterBar" class="clibtns"></div>
+      </div>
+      <div id="tllFilterWrap" class="clifilter last">
+        <span class="clifilter-lbl">Taller / Origen:</span>
+        <div id="tllFilterBar" class="clibtns"></div>
+      </div>
     </div>
 
     <div id="dash">
@@ -200,28 +209,32 @@
       <div class="kdual" id="kdualWrap">
         <div class="kpanel" id="panelLives">
           <div class="kh" id="khLives">🏭 LIVES — <span id="kwL">Sem</span></div>
-          <div class="kgrid">
-            <div class="kcell"><div class="v" id="L_aud">—</div><div class="l">Auditorías</div></div>
-            <div class="kcell"><div class="v" id="L_lote">—</div><div class="l">Lote auditado</div></div>
-            <div class="kcell"><div class="v ap" id="L_ap">—</div><div class="l">Aprobadas</div></div>
-            <div class="kcell"><div class="v re" id="L_re">—</div><div class="l">Rechazadas</div></div>
-          </div>
-          <div class="donutwrap">
-            <div class="dc"><canvas id="dL"></canvas></div>
-            <div class="dleg"><b id="L_pr">—</b><span class="dl2">de rechazo</span></div>
+          <div class="kbody">
+            <div class="kgrid">
+              <div class="kcell"><div class="v" id="L_aud">—</div><div class="l">Auditorías</div></div>
+              <div class="kcell"><div class="v" id="L_lote">—</div><div class="l">Lote auditado</div></div>
+              <div class="kcell"><div class="v ap" id="L_ap">—</div><div class="l">Aprobadas</div></div>
+              <div class="kcell"><div class="v re" id="L_re">—</div><div class="l">Rechazadas</div></div>
+            </div>
+            <div class="donutwrap">
+              <div class="dc"><canvas id="dL"></canvas></div>
+              <div class="dleg"><b id="L_pr">—</b><span class="dl2">de rechazo</span></div>
+            </div>
           </div>
         </div>
         <div class="kpanel tall" id="panelTalleres">
           <div class="kh" id="khTalleres">🏗 TALLERES — <span id="kwT">Sem</span></div>
-          <div class="kgrid">
-            <div class="kcell tall"><div class="v" id="T_aud">—</div><div class="l">Auditorías</div></div>
-            <div class="kcell tall"><div class="v" id="T_lote">—</div><div class="l">Lote auditado</div></div>
-            <div class="kcell"><div class="v ap" id="T_ap">—</div><div class="l">Aprobadas</div></div>
-            <div class="kcell"><div class="v re" id="T_re">—</div><div class="l">Rechazadas</div></div>
-          </div>
-          <div class="donutwrap">
-            <div class="dc"><canvas id="dT"></canvas></div>
-            <div class="dleg"><b id="T_pr">—</b><span class="dl2">de rechazo</span></div>
+          <div class="kbody">
+            <div class="kgrid">
+              <div class="kcell tall"><div class="v" id="T_aud">—</div><div class="l">Auditorías</div></div>
+              <div class="kcell tall"><div class="v" id="T_lote">—</div><div class="l">Lote auditado</div></div>
+              <div class="kcell"><div class="v ap" id="T_ap">—</div><div class="l">Aprobadas</div></div>
+              <div class="kcell"><div class="v re" id="T_re">—</div><div class="l">Rechazadas</div></div>
+            </div>
+            <div class="donutwrap">
+              <div class="dc"><canvas id="dT"></canvas></div>
+              <div class="dleg"><b id="T_pr">—</b><span class="dl2">de rechazo</span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -538,6 +551,7 @@ function poblarClientes(){
   const wrap = document.getElementById('cliFilterWrap');
   if(!clientes.length){ wrap.style.display='none'; return; }
   wrap.style.display='flex';
+  document.getElementById('filtersCard').style.display='block';
   const bar = document.getElementById('cliFilterBar');
   bar.innerHTML = '<button class="clibtn active" type="button" data-cli="" onclick="setCliente(null)">Todos</button>' +
     clientes.map(c=>`<button class="clibtn" type="button" data-cli="${c.replace(/"/g,'&quot;')}" onclick="setCliente('${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');
@@ -558,6 +572,7 @@ function poblarTalleres(){
   const wrap = document.getElementById('tllFilterWrap');
   if(!talleres.length){ wrap.style.display='none'; return; }
   wrap.style.display='flex';
+  document.getElementById('filtersCard').style.display='block';
   const bar = document.getElementById('tllFilterBar');
   bar.innerHTML = '<button class="clibtn active" type="button" data-tll="" onclick="setTaller(null)">Todos</button>' +
     talleres.map(t=>{
@@ -631,6 +646,12 @@ function render(mode, value){
   document.getElementById('blkDefT').style.display = (soloOrigen && esSoloLives) ? 'none' : '';
   document.getElementById('blkDerL').style.display = (soloOrigen && !esSoloLives) ? 'none' : '';
   document.getElementById('blkDerT').style.display = (soloOrigen && esSoloLives) ? 'none' : '';
+  document.querySelectorAll('.kbody').forEach(el=>el.classList.remove('wide'));
+  if(soloOrigen){
+    const visiblePanel = esSoloLives ? 'panelLives' : 'panelTalleres';
+    const kb = document.querySelector('#'+visiblePanel+' .kbody');
+    if(kb) kb.classList.add('wide');
+  }
 
   const L = kpiFor(liveRows, 'L', plabel);
   const T = kpiFor(tallerRows, 'T', plabel);
