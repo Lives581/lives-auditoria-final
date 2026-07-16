@@ -20,7 +20,13 @@ input,select{width:100%;border:1px solid #dce1e7;border-radius:9px;padding:10px;
 .btn{border:none;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer;font-size:14px}
 .btn.prim{background:var(--navy);color:#fff}
 .btn.sec{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+.btn.toggle{background:#fff;color:var(--navy);border:1px solid #dce1e7}
+.btn.toggle.active{background:var(--amber);color:#5c4400;border-color:var(--amber)}
 .hint{font-size:12px;color:#889;margin-top:8px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.top .txt{min-width:0}
+.top-link{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:9px;padding:9px 14px;font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap}
+.top-link:hover{background:rgba(255,255,255,.28)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:var(--navy);color:#fff;text-align:left;padding:9px 10px;position:sticky;top:0;font-size:11px;text-transform:uppercase;letter-spacing:.3px}
 td{padding:9px 10px;border-bottom:1px solid #eef1f4}
@@ -37,8 +43,11 @@ tr:hover td{background:#f6f9fb}
 </head>
 <body>
 <div class="top">
-  <h1>Buscar auditorías</h1>
-  <div class="sub">AC-009-25 · Calidad Manufactura · LIVES</div>
+  <div class="txt">
+    <h1>Buscar auditorías</h1>
+    <div class="sub">AC-009-25 · Calidad Manufactura · LIVES</div>
+  </div>
+  <a class="top-link" href="Auditoria_Final_EnVivo.html">📊 Ver dashboard en vivo</a>
 </div>
 
 <div class="wrap">
@@ -58,6 +67,8 @@ tr:hover td{background:#f6f9fb}
     <div class="btns">
       <button class="btn prim" id="btnBuscar">Buscar</button>
       <button class="btn sec" id="btnLimpiar">Limpiar</button>
+      <button class="btn toggle" id="btnReprocesos" type="button">Reprocesos</button>
+      <button class="btn toggle" id="btnLicencias" type="button">Licencias</button>
     </div>
     <div class="hint">Deja los campos vacíos y pulsa Buscar para ver las más recientes. Puedes combinar filtros.</div>
   </div>
@@ -79,7 +90,15 @@ const SHEET_ID='1zM-ajBkOs_PgyzEaXh_gVJ1seXvjRJSVO1ZRql7KnVQ';
 let DATA=[];
 // índices de columnas en AUDITORÍAS
 const C={id:0,fecha:1,nAud:2,proceso:3,intext:4,servicio:5,cliente:6,grupo:7,estiloL:8,estiloC:9,po:10,color:11,
-         destino:12,pedido:13,recibido:14,lote:15,licencia:16,resAql:23,override:24,resFinal:27,auditor:31,semana:32};
+         destino:12,pedido:13,recibido:14,lote:15,licencia:16,resAql:23,override:24,resFinal:27,auditor:31,semana:32,
+         computable:38,reproceso:39};
+// Filtros toggle (Reprocesos / Licencias) — no van como columnas en la tabla, solo filtran
+let filtroReproceso=false, filtroLicencia=false;
+function esVerdadero(v){
+  const s=norm(v);
+  if(!s) return false;
+  return !['0','no','false','n/a','na'].includes(s);
+}
 
 async function gviz(tab){
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tab)}`;
@@ -145,6 +164,8 @@ function buscar(){
     if(aud&&r[C.auditor]!==aud) return false;
     if(resu&&norm(r[C.resFinal]).indexOf(resu)<0) return false;
     if(!fechaOK(r[C.fecha],desde,hasta)) return false;
+    if(filtroReproceso&&!esVerdadero(r[C.reproceso])) return false;
+    if(filtroLicencia&&!esVerdadero(r[C.licencia])) return false;
     return true;
   });
   // más recientes primero
@@ -175,6 +196,19 @@ document.getElementById('btnBuscar').onclick=buscar;
 document.getElementById('btnLimpiar').onclick=()=>{
   ['fPo','fGrupo','fEstilo','fColor','fDesde','fHasta'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fProceso').value=''; document.getElementById('fCliente').value=''; document.getElementById('fAuditor').value=''; document.getElementById('fResultado').value='';
+  filtroReproceso=false; filtroLicencia=false;
+  document.getElementById('btnReprocesos').classList.remove('active');
+  document.getElementById('btnLicencias').classList.remove('active');
+  buscar();
+};
+document.getElementById('btnReprocesos').onclick=()=>{
+  filtroReproceso=!filtroReproceso;
+  document.getElementById('btnReprocesos').classList.toggle('active',filtroReproceso);
+  buscar();
+};
+document.getElementById('btnLicencias').onclick=()=>{
+  filtroLicencia=!filtroLicencia;
+  document.getElementById('btnLicencias').classList.toggle('active',filtroLicencia);
   buscar();
 };
 // Enter en cualquier input dispara búsqueda
