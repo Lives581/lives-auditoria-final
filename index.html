@@ -179,7 +179,6 @@ textarea{width:100%;border:1px solid #dce1e7;border-radius:10px;padding:11px;fon
       <div><label>Estilo LIVES</label><input id="estiloL" list="dlEstilo" autocomplete="off" placeholder="24647">
         <datalist id="dlEstilo"></datalist></div>
       <div><label id="poLabel">PO *</label><input id="po" list="dlPo" autocomplete="off" placeholder="6002469 o con letras">
-        <div class="hint">Al menos 4 caracteres reales (letras/números). Puede tener rayas si así es tu PO — pero no pongas solo una raya ni lo dejes con puro símbolo.</div>
         <div class="hint" id="poHint" style="display:none">En Costura, si aún no tienen el PO, pueden dejarlo vacío y completarlo después en "Mis auditorías".</div>
         <datalist id="dlPo"></datalist></div>
       <div><label>Color</label><input id="color" list="dlColor" autocomplete="off" placeholder="White">
@@ -399,7 +398,10 @@ function calcAvance(){
     if(llaveFila(r)===key && norm(r[3])===proc){
       // computable: AM = idx 38 (1 = auditoría real). Solo sumamos reales.
       const comp = (r[38]===''||r[38]==null) ? 1 : (Number(r[38])||0);
-      if(comp===1) lotePrevio += Number(r[14])||0;   // O=14 TOTAL_RECIBIDO (lote)
+      // AK=36 LOTE_CONTABLE: el lote ya deduplicado (0 si esta fila es REPETIDO del mismo lote).
+      // Usar TOTAL_RECIBIDO (O=14) aquí duplicaba el lote cada vez que se auditaba de nuevo
+      // el mismo grupo/estilo/color (1ra, 2da, 3ra…), inflando el % muy por encima de 100%.
+      if(comp===1) lotePrevio += Number(r[36])||0;   // AK=36 LOTE_CONTABLE (anti-inflación)
       // pedido de referencia: N=13 CANT_PEDIDO (el de la primera auditoría que lo puso)
       const ped = Number(r[13])||0;
       if(ped>pedidoRef) pedidoRef = ped;
