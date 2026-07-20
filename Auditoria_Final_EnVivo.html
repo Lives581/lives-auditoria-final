@@ -17,7 +17,7 @@
   .divider{width:1px;height:34px;background:rgba(255,255,255,.35);}
   .htitle{color:#fff;font-size:17px;font-weight:700;letter-spacing:.3px;}
   .hsub{color:#F1F6F4;font-size:12px;}
-  .wrap{max-width:1600px;margin:0 auto;padding:22px 32px 48px;}
+  .wrap{max-width:100%;margin:0;padding:22px 36px 48px;}
 
   .loading{text-align:center;padding:60px 20px;color:var(--stone);font-size:15px;}
   .loading .spin{display:inline-block;width:34px;height:34px;border:4px solid var(--warm-light);border-top-color:var(--sage);border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:14px;}
@@ -160,6 +160,14 @@
     body.print-ficha .ficha-card{box-shadow:none;max-width:100%;border-radius:0;}
     .no-print{display:none!important;}
   }
+
+  .clickhint{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,var(--warm-light),#fff);border:1.5px dashed var(--sage);border-radius:10px;padding:10px 16px;margin-bottom:16px;}
+  .clickhint .ch-icon{font-size:19px;flex-shrink:0;animation:chpulse 1.8s ease-in-out infinite;}
+  .clickhint .ch-text{font-size:12.5px;color:#333;flex:1;line-height:1.4;}
+  .clickhint .ch-text b{color:var(--sage-dark);}
+  .clickhint .ch-close{background:none;border:none;color:var(--stone);font-size:14px;cursor:pointer;padding:2px 6px;flex-shrink:0;}
+  .clickhint .ch-close:hover{color:#333;}
+  @keyframes chpulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.18);opacity:.75;}}
 </style>
 </head>
 <body>
@@ -208,6 +216,7 @@
 
     <div id="dash">
       <div class="note" id="srcNote"></div>
+      <div class="clickhint" id="clickHint"><span class="ch-icon">👆</span><span class="ch-text"><b>Tip:</b> los gráficos y las filas de las tablas son interactivos — haz clic sobre una barra, fila o "DETALLE" para ver la ficha completa de ese dato.</span><button class="ch-close" type="button" onclick="document.getElementById('clickHint').style.display='none'" title="Cerrar aviso">✕</button></div>
       <div class="note warn" id="dataWarn" style="display:none"></div>
 
       <!-- Resumen ejecutivo: lo primero que ve un gerente -->
@@ -282,7 +291,7 @@
 
       <div class="panel" id="panelRanking">
         <div class="pt">🏆 Ranking de talleres externos</div>
-        <div class="ph" id="rankSub">Ordenado por menor % de aprobación primero. Clic en una fila para ver la ficha imprimible.</div>
+        <div class="ph" id="rankSub">Ordenado por menor % de aprobación primero. Clic en una fila para ver el detalle imprimible.</div>
         <div style="overflow-x:auto;">
           <table id="rankTbl" style="width:100%;border-collapse:collapse;font-size:12.5px;">
             <thead><tr style="background:var(--warm-light);text-align:left;">
@@ -318,7 +327,7 @@
 
       <div class="panel">
         <div class="pt">👔 % de rechazo por cliente</div>
-        <div class="ph" id="cliSub">Clientes con mayor % de rechazo en el período (mín. 3 auditorías). Clic en una fila para ver la ficha.</div>
+        <div class="ph" id="cliSub">Clientes con mayor % de rechazo en el período (mín. 3 auditorías). Clic en una fila para ver el detalle.</div>
         <div class="note" id="cliWarn" style="display:none;font-size:11px;"></div>
         <div id="listCli"></div>
       </div>
@@ -813,7 +822,7 @@ function renderProceso(wrows){
 }
 
 function renderRanking(){
-  document.getElementById('rankSub').textContent = 'Acumulado '+(YEARS[0]||'')+' · ordenado por menor % de aprobación primero. Clic en una fila para ver la ficha imprimible.';
+  document.getElementById('rankSub').textContent = 'Acumulado '+(YEARS[0]||'')+' · ordenado por menor % de aprobación primero. Clic en una fila para ver el detalle imprimible.';
   const tallerRows = ROWS.filter(r=>r.intext==='EXTERNA'); // acumulado del año, no solo el período (ranking estable)
   const m={};
   tallerRows.forEach(r=>{
@@ -834,7 +843,7 @@ function renderRanking(){
       `<td style="text-align:right;color:var(--sage)">${r.ap}</td><td style="text-align:right;color:var(--rose)">${r.re}</td>`+
       `<td style="text-align:right;font-weight:700">${r.pctAp}%</td>`+
       `<td style="text-align:center"><span class="st ${cls}">${lbl}</span></td>`+
-      `<td><button class="fbtn" type="button" onclick="event.stopPropagation();abrirFichaTaller('${kEsc}')">Ficha</button></td></tr>`;
+      `<td><button class="fbtn" type="button" onclick="event.stopPropagation();abrirFichaTaller('${kEsc}')">DETALLE</button></td></tr>`;
   }).join('');
 }
 
@@ -865,7 +874,7 @@ function abrirFichaTaller(servicio, period){
   }
   const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('fichaCard').innerHTML =
-    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${servicio}</div><div class="tsub">Ficha de desempeño · Taller externo · ${plabel}</div></div><div class="tpct">${pctAp}%<small>${n?lbl:'Sin datos'}</small></div></div>`+
+    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${servicio}</div><div class="tsub">Detalle de desempeño · Taller externo · ${plabel}</div></div><div class="tpct">${pctAp}%<small>${n?lbl:'Sin datos'}</small></div></div>`+
     `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${n}</div><div class="l">Total Aud.</div></div><div class="k"><div class="v" style="color:var(--sage)">${ap}</div><div class="l">Aprobadas</div></div><div class="k"><div class="v" style="color:var(--rose)">${re}</div><div class="l">Rechazadas</div></div><div class="k"><div class="v">${pctAp}%</div><div class="l">% Aprobación</div></div></div>`+
     `<div class="fc-sec">Defectos más frecuentes (muestra)</div><div class="fc-defs">${defsHTML}</div>`+
     `<div class="fc-sec">Derivados más frecuentes (lote completo)</div><div class="fc-defs">${dersHTML}</div>`+
@@ -1042,7 +1051,7 @@ function abrirFichaCliente(cliente, period){
   }
   const hoy = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('fichaCard').innerHTML =
-    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${cliente}</div><div class="tsub">Ficha de cliente · ${plabel}</div></div><div class="tpct">${pctAp}%<small>${n?lbl:'Sin datos'}</small></div></div>`+
+    `<div class="fc-hd" style="background:${headColor}"><div><div class="co">LIVES — Área de Calidad · AC-009-25</div><div class="tn">${cliente}</div><div class="tsub">Detalle de cliente · ${plabel}</div></div><div class="tpct">${pctAp}%<small>${n?lbl:'Sin datos'}</small></div></div>`+
     `<div class="fc-body"><div class="fc-kpis"><div class="k"><div class="v">${n}</div><div class="l">Total Aud.</div></div><div class="k"><div class="v" style="color:var(--sage)">${ap}</div><div class="l">Aprobadas</div></div><div class="k"><div class="v" style="color:var(--rose)">${re}</div><div class="l">Rechazadas</div></div><div class="k"><div class="v">${pctAp}%</div><div class="l">% Aprobación</div></div></div>`+
     `<div class="fc-sec">Defectos más frecuentes (muestra)</div><div class="fc-defs">${defsHTML}</div>`+
     `<div class="fc-sec">Derivados más frecuentes (lote completo)</div><div class="fc-defs">${dersHTML}</div>`+
