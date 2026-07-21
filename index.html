@@ -348,19 +348,25 @@ async function cargarAud(){
   return AUD_CACHE;
 }
 function norm(v){ return String(v==null?'':v).trim().toUpperCase(); }
-// Llave de lote = grupo+estilo_lives+estilo_cliente+color+po (col H,I,J,L,K = idx 7,8,9,11,10)
-// La llave de "mismo lote" YA NO incluye el PO (a veces no está disponible aún en Costura) ni Destino.
+// Llave de lote = grupo+estilo_lives+estilo_cliente+color+po+destino (col H,I,J,L,K,M = idx 7,8,9,11,10,12)
+// Incluye PO y Destino de nuevo: un mismo estilo/color despachado a destinos distintos
+// (ej. Ecom vs Canadá) o con PO distinto son lotes DIFERENTES, aunque compartan estilo/color.
+// Destino se compara SOLO por las primeras 3 letras (el código de país: USA/CAN/KOR/etc.) —
+// lo que viene después (SEA/AIR/etc.) casi nunca lo ponen bien, así que no debe romper la coincidencia.
+// OJO: esto significa que Costura (sin PO aún) y Acabados (con PO) del mismo lote físico
+// vuelven a NO reconocerse como el mismo lote hasta que el PO coincida en ambas.
+function destinoCorto(v){ return norm(v).substring(0,3); }
 function llaveActual(){
-  return [norm($('grupo').value),norm($('estiloL').value),norm($('estiloC').value),norm($('color').value)].join('|');
+  return [norm($('grupo').value),norm($('estiloL').value),norm($('estiloC').value),norm($('color').value),norm($('po').value),destinoCorto($('destino').value)].join('|');
 }
 function llaveFila(r){
-  // r = fila de AUDITORÍAS (array). idx: H=7 grupo, I=8 estLives, J=9 estCli, L=11 color
-  return [norm(r[7]),norm(r[8]),norm(r[9]),norm(r[11])].join('|');
+  // r = fila de AUDITORÍAS (array). idx: H=7 grupo, I=8 estLives, J=9 estCli, K=10 po, L=11 color, M=12 destino
+  return [norm(r[7]),norm(r[8]),norm(r[9]),norm(r[11]),norm(r[10]),destinoCorto(r[12])].join('|');
 }
 function poEsOpcional(){ return S.proceso==='Costura (taller)'; }
 function loteCompleto(){
   const poOK = poEsOpcional() ? true : !!$('po').value;
-  return $('grupo').value&&$('estiloL').value&&$('estiloC').value&&$('color').value&&poOK&&S.proceso;
+  return $('grupo').value&&$('estiloL').value&&$('estiloC').value&&$('color').value&&poOK&&$('destino').value&&S.proceso;
 }
 function ordinalTexto(n){
   const t={1:'1ra',2:'2da',3:'3ra'}; return t[n]||(n+'ta');
